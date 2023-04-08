@@ -1,0 +1,23 @@
+package br.com.jcaguiar.lfe;
+
+import lombok.ToString;
+
+@ToString(callSuper = true)
+public class ObjectInteractionBox extends ObjectBox {
+
+    int kind;       //warning, attack, react, block, wind, twister, grab, item;
+    int id;         //the id to be created on trigger; if 0 = no trigger;
+    int frame;      //the frame to be created on trigger; if 0 = no trigger;
+    int effect;     //the additional effect the attack apply;
+    int dvx;        //the x acceleration; block = repel force, wind = push force, twister = spin force, react = nothing
+    int dvy;        //the y acceleration; block = repel force, wind = push force, twister = spin force, react = nothing
+    int dvz;        //the z acceleration; block = repel force, wind = push force, twister = spin force, react = nothing
+    int fall;       //the amount of fall points the enemy will receive
+    int arest;      //the unit-hit timer tolerance
+    int vrest;      //the many-hit timer tolerance
+    int bdefend;    //the amount og guard-break the enemy will receive
+    int injury;     //the damage output;
+    int catchingact;//the frame to go if catch someone
+    int caughtact; //the frame the enemy go if been catch
+
+}
