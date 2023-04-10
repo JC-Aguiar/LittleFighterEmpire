@@ -1,6 +1,9 @@
 package br.com.jcaguiar.lfe;
 
+import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.experimental.FieldDefaults;
@@ -10,11 +13,13 @@ import java.util.*;
 
 @Getter
 @FieldDefaults(level = AccessLevel.PROTECTED)
-public class DataGameObj {
+public class DataGameObj extends Actor {
 
     int objectId;
     String name;
     String head;
+    int walkingFrameRate;
+    int runningFrameRate;
     final List<DataBmp> bmpSources = new ArrayList<>();
     final Map<Integer, DataFrame> dataFrames = new HashMap<>();
     TextureRegion[] sprites;
@@ -32,6 +37,11 @@ public class DataGameObj {
             if(!keyValue[0].matches("file\\(\\d+-\\d+\\)"))
                 throw new RuntimeException("Load Data Fail: invalid value inside <bmp_begin> tag: " + line);
         }
+        else if(line.startsWith("walking_frame_rate"))
+            walkingFrameRate = Integer.parseInt(keyValue[1].trim());
+        else if(line.startsWith("running_frame_rate"))
+            runningFrameRate = Integer.parseInt(keyValue[1].trim());
+
         if(keyValue.length != size)
             throw new RuntimeException("Load Data Fail: invalid value inside <bmp_begin> tag: " + line);
 
@@ -49,4 +59,8 @@ public class DataGameObj {
         }
     }
 
+    @Override
+    public void draw(Batch batch, float parentAlpha) {
+        super.draw(batch, parentAlpha);
+    }
 }

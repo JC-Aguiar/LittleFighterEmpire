@@ -77,11 +77,11 @@ public abstract class DataRepositry {
             throw new RuntimeException("File not found: " + path);
 
         //Open and read the file's content
-        val dataGameObj = new DataGameObj();
-        val bmpContent = new AtomicBoolean(false);
-        val frameIndex = new AtomicInteger(-1);
-        val frameData = new AtomicReference<>(new DataFrame());
-        val currentScope = new AtomicReference<DataFrameScope>(null);
+        DataGameObj dataGameObj = new DataGameObj();
+        AtomicBoolean bmpContent = new AtomicBoolean(false);
+        AtomicInteger frameIndex = new AtomicInteger(-1);
+        AtomicReference<DataFrame> frameData = new AtomicReference<>(new DataFrame());
+        AtomicReference<DataFrameScope> currentScope = new AtomicReference<>(null);
         try {
             val input = new FileInputStream(filePath.toFile());
             val buffer = new BufferedReader(new InputStreamReader(input));
@@ -148,7 +148,7 @@ public abstract class DataRepositry {
             throw new RuntimeException(e);
         }
 
-        val dataLoaderString = dataGameObj.getDataFrames().keySet()
+        final String dataLoaderString = dataGameObj.getDataFrames().keySet()
             .stream()
             .map(f -> f + ": " + dataGameObj.getDataFrames().get(f).toString())
             .collect(Collectors.joining("\n"));

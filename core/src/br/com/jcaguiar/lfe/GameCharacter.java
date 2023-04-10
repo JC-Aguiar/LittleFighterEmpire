@@ -1,6 +1,7 @@
 package br.com.jcaguiar.lfe;
 
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.g2d.Batch;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.experimental.FieldDefaults;
@@ -9,6 +10,9 @@ import lombok.val;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+
+import static br.com.jcaguiar.lfe.CharacterCoreFrames.RUN;
+import static br.com.jcaguiar.lfe.CharacterCoreFrames.WALK;
 
 @Getter
 @FieldDefaults(level = AccessLevel.PRIVATE)
@@ -19,6 +23,8 @@ public class GameCharacter extends DataGameObj {
     int team;
     boolean isHuman;
     float displayX, displayY;
+    int walkCount, runCount = 0;
+    boolean walkReverse, runReverse = false;
 
     //STATUS
     int lv;
@@ -38,7 +44,7 @@ public class GameCharacter extends DataGameObj {
 
     //PHYSICS
     //int size TODO: implement
-    boolean right;
+    boolean right, inAir = false;
     float posX, posY, posZ;
     float accX, accY, accZ;
     float speedWalkX, speedWalkZ;
@@ -62,12 +68,14 @@ public class GameCharacter extends DataGameObj {
         this.bmpSources.addAll(dataObj.bmpSources);
         this.head = dataObj.head;
         this.name = dataObj.name;
+        setBoundsPerSprite();
     }
 
     //VS MODE
     public void startVSMode(int hp, int mp, int team, int frame, boolean isHuman, int posX, int posY) {
         this.hpMax = this.hpNow = this.hpLimit = hp;
-        this.mpMax = this.mpNow = this.mpLimit = mp;
+        this.mpMax = mp;
+        this.mpNow = this.mpLimit = 500;
         this.team = team;
         this.frameIndex = frame;
         checkValidFrame();
@@ -88,24 +96,52 @@ public class GameCharacter extends DataGameObj {
         frameIndex = Math.max(frameIndex, 0);
     }
 
-    private void setNewFrame() {
+    private void checkNewFrame() {
         if(frameTimer <= 0) {
-            frameIndex = dataFrames.get(frameIndex).getNextFrame();
+            val currentState = dataFrames.get(frameIndex).getState();
+            if(currentState == WALK.state) {
+                if(walkCount >= walkingFrameRate) walkReverse = true;
+                else if(walkCount <= (walkingFrameRate * -2)) walkReverse = false;
+                walkCount += walkReverse ? -1 : 1;
+                frameIndex += walkReverse ? -1 : 1;
+
+            } else if(currentState == RUN.state) {
+                if(runCount >= runningFrameRate) runReverse = true;
+                else if(runCount <= 0) runReverse = false;
+                runCount += runReverse ? -1 : 1;
+                frameIndex += runReverse ? -1 : 1;
+
+            } else {
+                frameIndex = dataFrames.get(frameIndex).getNextFrame();
+            }
             checkValidFrame();
             setFrameTimer();
         }
     }
 
-    public void draw(float deltaTime, SpriteBatch batch) {
-        setNewFrame();
+    private void setBoundsPerSprite() {
+        setBounds(sprites[picIndex].getRegionX(),
+                  sprites[picIndex].getRegionY(),
+                  sprites[picIndex].getRegionWidth(),
+                  sprites[picIndex].getRegionHeight());
+    }
+
+    private void setCurrentSprite() {
         val currentDataFrame = dataFrames.get(frameIndex);
         picIndex = currentDataFrame.getPic();
         val currentSprite = sprites[picIndex];
-        displayX = posX + (currentSprite.getRegionWidth() - currentDataFrame.getCenterX() +1);
-        displayY = posY + (currentSprite.getRegionHeight() - currentDataFrame.getCenterY() +1);
-        batch.draw(sprites[picIndex], displayX, displayY * -1);
-        frameTimer -= deltaTime;
+        setX(posX + (currentDataFrame.getCenterX() - currentSprite.getRegionWidth()  +1));
+        setY((posY + (currentDataFrame.getCenterY() - currentSprite.getRegionHeight() +1)));
     }
 
+    @Override
+    public void draw(Batch batch, float parentAlpha) {
+        checkNewFrame();
+        setCurrentSprite();
+        setBoundsPerSprite();
+        batch.draw(sprites[picIndex], getX(), getY());
+//        batch.draw(batch, deltaTime);
+        frameTimer -= Gdx.graphics.getDeltaTime();
+    }
 
 }
