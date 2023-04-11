@@ -31,10 +31,11 @@ public class App extends ApplicationAdapter {
 
 		DataRepositry.loadDatFile(1, "C:\\joao.aguiar\\Workspace\\AGUIAR\\LFE\\LFE GDX\\assets\\Davis.dat");
         GameCharacter davis = new GameCharacter(DataRepositry.GAME_OBJS_MAP.get(1));
-		davis.startVSMode(500, 255, 0, 300, true, Gdx.graphics.getWidth()/2, Gdx.graphics.getHeight()/2);
+		davis.startVSMode(500, 255, 0, 300, true, 0, 0);
 
 		stage.addActor(davis);
 		Gdx.input.setInputProcessor(stage);
+		stage.setKeyboardFocus(davis);
 	}
 	
 	@Override

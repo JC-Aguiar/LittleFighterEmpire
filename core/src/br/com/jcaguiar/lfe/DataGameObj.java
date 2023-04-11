@@ -25,6 +25,21 @@ public class DataGameObj extends Actor {
     TextureRegion[] sprites;
 
     public void setBmpContent(String line) {
+        if(line.startsWith("walking_frame_rate")) {
+            System.out.println("Found walking_frame_rate");
+            line = line.replace("walking_frame_rate", "");
+            walkingFrameRate = Integer.parseInt(line.trim());
+            System.out.println("walkingFrameRate: " + walkingFrameRate);
+            return;
+        }
+        else if(line.startsWith("running_frame_rate")) {
+            System.out.println("Found running_frame_rate");
+            line = line.replace("running_frame_rate", "");
+            runningFrameRate = Integer.parseInt(line.trim());
+            System.out.println("runningFrameRate: " + runningFrameRate);
+            return;
+        }
+
         var keyValue =  Arrays.stream(line.replace(":", "").split(" "))
             .filter(l -> !l.equals("w") && !l.equals("h") && !l.equals("col") && !l.equals("row"))
             .filter(l -> !l.isEmpty())
@@ -37,10 +52,6 @@ public class DataGameObj extends Actor {
             if(!keyValue[0].matches("file\\(\\d+-\\d+\\)"))
                 throw new RuntimeException("Load Data Fail: invalid value inside <bmp_begin> tag: " + line);
         }
-        else if(line.startsWith("walking_frame_rate"))
-            walkingFrameRate = Integer.parseInt(keyValue[1].trim());
-        else if(line.startsWith("running_frame_rate"))
-            runningFrameRate = Integer.parseInt(keyValue[1].trim());
 
         if(keyValue.length != size)
             throw new RuntimeException("Load Data Fail: invalid value inside <bmp_begin> tag: " + line);
