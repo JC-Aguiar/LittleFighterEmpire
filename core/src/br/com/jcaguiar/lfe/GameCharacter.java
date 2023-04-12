@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import lombok.AccessLevel;
@@ -31,6 +32,11 @@ public class GameCharacter extends DataGameObj {
     int walkCount, runCount = 0;
     boolean walkReverse, runReverse = false;
     Sprite currentSprite;
+
+    int runTimer; //only for player
+    private ShapeRenderer frameRenderer = new ShapeRenderer(); //TODO: teste! remove!
+    private ShapeRenderer centerRenderer = new ShapeRenderer(); //TODO: teste! remove!
+    private ShapeRenderer bodyRenderer = new ShapeRenderer(); //TODO: teste! remove!
 
     //STATUS
     int lv;
@@ -62,6 +68,7 @@ public class GameCharacter extends DataGameObj {
 
     //INPUTS
     boolean keyUp, keyDown, keyLeft, keyRight;
+    boolean hitRun;
     boolean hitA, hitJ, hitD, hitJA, hitDfA, hitDuA, hitDdA, hitDfJ, hitDuJ, hitDdJ, hitDAJ;
 
     //SCORE
@@ -130,12 +137,13 @@ public class GameCharacter extends DataGameObj {
         this.mpNow = this.mpLimit = 500;
         this.team = team;
         this.frameIndex = frame;
-        checkValidFrame();
-        setFrameTimer();
         this.isHuman = isHuman;
         this.right = new Random().nextBoolean();
         this.posX = posX;
         this.posY = posY;
+        setFaceside();
+        checkValidFrame();
+        setFrameTimer();
 //        setRandomPosition();
     }
 
@@ -152,26 +160,25 @@ public class GameCharacter extends DataGameObj {
         frameIndex = Math.max(frameIndex, 0);
     }
 
+
     private void checkNewFrame() {
         if(frameTimer <= 0) {
             val currentState = currentDataFrame().getState();
-
-            //WALKING STATE
+            //Walking State
             if(currentState == WALK.state) {
-                System.out.println("walkCount: " + walkCount);
                 if(walkCount >= walkingFrameRate) walkReverse = true;
-                else if(walkCount <= -walkingFrameRate) walkReverse = false;
+                else if(walkCount <= 0) walkReverse = false;
                 walkCount += walkReverse ? -1 : 1;
-                setNewFrame(walkReverse ? frameIndex-1 : frameIndex+1 , 2.5f * 0.1f);
-
-            } //RUNNING STATE
+                setNewFrame(WALK.frame + walkCount, 2.0f * 0.1f);
+            }
+            //Running State
             else if(currentState == RUN.state) {
                 if(runCount >= runningFrameRate) runReverse = true;
                 else if(runCount <= 0) runReverse = false;
                 runCount += runReverse ? -1 : 1;
-                setNewFrame(runReverse ? frameIndex-1 : frameIndex+1 , 1.5f * 0.1f);
-
-            } //ANY OTHER STATE
+                setNewFrame(runReverse ? frameIndex-1 : frameIndex+1 , 1.25f * 0.1f);
+            }
+            //Any Other State
             else setNewFrame(currentDataFrame().getNextFrame());
         }
     }
@@ -185,16 +192,27 @@ public class GameCharacter extends DataGameObj {
     private void setCurrentSprite() {
         picIndex = currentDataFrame().getPic();
         currentSprite = new Sprite(sprites[picIndex]);
-        setX(posX + (currentDataFrame().getCenterX() - currentSprite.getRegionWidth()  +1));
-        setY(posY + (currentDataFrame().getCenterY() - currentSprite.getRegionHeight() +1));
-        setOriginX(currentDataFrame().getCenterX() - currentSprite.getRegionWidth()  +1);
-        setOriginY(currentDataFrame().getCenterY() - currentSprite.getRegionHeight() +1);
+        setX(getX() + posX);
+        setY(getY() + posY);
+        setOriginX(currentSprite.getRegionWidth() - currentDataFrame().getCenterX());
+        setOriginY(currentSprite.getRegionY() + currentDataFrame().getCenterY() / 2);
+        //        setX(posX + currentDataFrame().getCenterX());
+        //        setY(posY - (getHeight() + 1) + currentDataFrame().getCenterY());
+        //(currentSprite.getRegionWidth() - currentDataFrame().getCenterX()  +1)
+        //(currentSprite.getRegionHeight() - currentDataFrame().getCenterY() +1)
     }
 
     public boolean isMovable() {
         return currentDataFrame().getState() == STAND.state
             || currentDataFrame().getState() == WALK.state
             || currentDataFrame().getState() == RUN.state;
+    }
+
+    public boolean isFlippable() {
+        return currentDataFrame().getState() == STAND.state
+            || currentDataFrame().getState() == WALK.state
+            || currentDataFrame().getState() == JUMP.state
+            || currentDataFrame().getState() == GUARD.state;
     }
 
     private void setNewFrame(int index) {
@@ -211,14 +229,20 @@ public class GameCharacter extends DataGameObj {
 
     public void movement() {
         if(!isMovable()) return;
-
         float movY = 0f, movX = 0f;
+
+        //Check pressed keys
         if(keyUp) movY = 1f;
         else if(keyDown) movY = -1f;
         if(keyRight) movX = 2f;
         else if(keyLeft) movX = -2f;
 
+        //Case horizontal movement
         if(movX != 0 || movY != 0) {
+            if(movX > 0 && isFlippable())
+                right = true;
+            else if(movX < 0 && isFlippable())
+                right = false;
             if(movX != 0 && movY != 0) {
                 movX = movX * 0.75f;
                 movY = movY * 0.75f;
@@ -226,7 +250,8 @@ public class GameCharacter extends DataGameObj {
             if(currentDataFrame().getState() == STAND.state) {
                 setNewFrame(WALK.frame, 3.0f * 0.1f);
             }
-        } else {
+        } //Case no horizontal movement
+        else {
             walkCount = runCount = 0;
             walkReverse = runReverse = false;
             if(currentDataFrame().getState() == WALK.state)
@@ -237,15 +262,75 @@ public class GameCharacter extends DataGameObj {
         posY += movY;
     }
 
+    private void setFaceside() {
+        currentSprite.flip(!right, false);
+    }
+
+    public float getRelativeSideX() {
+        return right ?  getX() : currentSprite.getWidth();
+    }
+
+    private int getModBySide() {
+        return right ? 1 : -1;
+    }
+
     @Override
     public void draw(Batch batch, float parentAlpha) {
         movement();
         checkNewFrame();
         setCurrentSprite();
+        setFaceside();
 
+        batch.end();
+        frameRenderer.setProjectionMatrix(batch.getProjectionMatrix());
+        frameRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        frameRenderer.setColor(1f, 0f, 0f, 0.33f);
+        frameRenderer.rect(getX(), getY(), getWidth(), getHeight());
+        frameRenderer.end();
+        if(currentDataFrame().getBodies().size() > 0) {
+            bodyRenderer.setProjectionMatrix(batch.getProjectionMatrix());
+            bodyRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            bodyRenderer.setColor(0.5f, 0f, 0.5f, 1f);
+            /**
+             * RIGHT:
+             *          [     ]
+             *          [  .  ]
+             *       .
+             *          . + x
+             * LEFT:
+             *          [     ]
+             *          [  .  ]
+             *                   .
+             *                .
+             */
+            if(right) {
+                bodyRenderer.rect(
+                    getX() + currentDataFrame().getBodies().get(0).x,
+                    getY() + getHeight() - currentDataFrame().getBodies().get(0).y,
+                    currentDataFrame().getBodies().get(0).w,
+                    -currentDataFrame().getBodies().get(0).h);
+            } else {
+                bodyRenderer.rect(
+                    getX() + getWidth() - currentDataFrame().getBodies().get(0).x,
+                    getY() + getHeight() - currentDataFrame().getBodies().get(0).y,
+                    -currentDataFrame().getBodies().get(0).w,
+                    -currentDataFrame().getBodies().get(0).h);
+            }
+            bodyRenderer.end();
+        }
+        batch.begin();
 
-        batch.draw(currentSprite, getX(), getY());
-//        batch.draw(batch, deltaTime);
+        batch.draw(currentSprite, getX(), getY(), getWidth(), getHeight());
+        //batch.draw(batch, deltaTime);
+
+        batch.end();
+        centerRenderer.setProjectionMatrix(batch.getProjectionMatrix());
+        centerRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        centerRenderer.setColor(0f, 1f, 0f, 1f);
+        centerRenderer.circle(getX() + currentDataFrame().getCenterX(), getY(), 1f);
+        centerRenderer.end();
+        batch.begin();
+
         frameTimer -= Gdx.graphics.getDeltaTime();
 
         setBoundsPerSprite();
