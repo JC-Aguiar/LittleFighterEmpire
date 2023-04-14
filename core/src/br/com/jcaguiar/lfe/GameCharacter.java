@@ -2,9 +2,12 @@ package br.com.jcaguiar.lfe;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
@@ -29,7 +32,6 @@ public class GameCharacter extends DataGameObj {
     int characterId;
     int team;
     boolean isHuman;
-    float displayX, displayY;
     int walkCount, runCount = 0;
     boolean walkReverse, runReverse = false;
     Sprite currentSprite;
@@ -38,6 +40,7 @@ public class GameCharacter extends DataGameObj {
     private ShapeRenderer zRenderer = new ShapeRenderer(); //TODO: teste! remove!
     private ShapeRenderer centerRenderer = new ShapeRenderer(); //TODO: teste! remove!
     private ShapeRenderer bodyRenderer = new ShapeRenderer(); //TODO: teste! remove!
+    BitmapFont font;  //TODO: teste! remove!
 
     //STATUS
     int lv;
@@ -59,14 +62,17 @@ public class GameCharacter extends DataGameObj {
     //int size TODO: implement
     boolean right = new Random().nextBoolean();
     boolean inAir = false;
-    float posX, posY, posZ, altitude;
-    float accX, accY, accZ;
+    float posX, posY, posZ;
+    float accX = 0, accY = 0, accZ = 0;
     float speedWalkX, speedWalkZ;
     float speedRunX, speedRunZ;
     float jumpX, jumpY, jumpZ;
     float startX, startZ;
     int weaponId, grabId = -1;
     int hitLag;
+    public static final float MAX_ACC_X = 10f;
+    public static final float  MAX_ACC_Y = 10f;
+    public static final float  MAX_ACC_Z = 10f;
 
     //INPUTS
     boolean keyUp, keyDown, keyLeft, keyRight;
@@ -90,21 +96,31 @@ public class GameCharacter extends DataGameObj {
         this.name = dataObj.name;
         this.walkingFrameRate = dataObj.walkingFrameRate;
         this.runningFrameRate = dataObj.runningFrameRate;
-        setCurrentSprite();
-        setFaceSide();
 
-        addListener(new InputListener(){
+        addListener(new InputListener() {
             @Override
             public boolean keyDown(InputEvent event, int keycode) {
                 return keyPress(keycode);
             }
         });
-        addListener(new InputListener(){
+        addListener(new InputListener() {
             @Override
             public boolean keyUp(InputEvent event, int keycode) {
                 return keyRelease(keycode);
             }
         });
+
+        // Carregando fonte TrueTypeFont
+        val generator = new FreeTypeFontGenerator(Gdx.files.internal("Carlito-Bold.ttf"));
+        FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        parameter.size = 20;
+        parameter.color = Color.WHITE;
+        parameter.flip = true;
+        parameter.shadowColor = Color.BLACK;
+        parameter.shadowOffsetX = 3;
+        parameter.shadowOffsetY = 3;
+        font = generator.generateFont(parameter);
+        generator.dispose();
     }
 
     private boolean keyPress(int keycode) {
@@ -134,7 +150,7 @@ public class GameCharacter extends DataGameObj {
     }
 
     //VS MODE
-    public void startVSMode(int hp, int mp, int team, int frame, boolean isHuman, int posX, int posY) {
+    public void startVSMode(int hp, int mp, int team, int frame, boolean isHuman, int posX, int posZ) {
         this.hpMax = this.hpNow = this.hpLimit = hp;
         this.mpMax = mp;
         this.mpNow = this.mpLimit = 500;
@@ -142,11 +158,12 @@ public class GameCharacter extends DataGameObj {
         this.frameIndex = frame;
         this.isHuman = isHuman;
         this.posX = posX;
-        this.posY = posY;
+        this.posY = 0;
+        this.posZ = posZ;
+        movement();
+        checkNewFrame();
+        setCurrentSprite();
         setFaceSide();
-        checkValidFrame();
-        setFrameTimer();
-        setZIndex((int) (this.posY + getHeight()));
 //        setRandomPosition();
     }
 
@@ -163,30 +180,31 @@ public class GameCharacter extends DataGameObj {
         frameIndex = Math.max(frameIndex, 0);
     }
 
-
     private void checkNewFrame() {
         if(frameTimer <= 0) {
             val currentState = currentDataFrame().getState();
             //Walking State
-            if(currentState == WALK.state) {
+            if(currentState == WALK.state && !inAir) {
                 if(walkCount >= walkingFrameRate) walkReverse = true;
                 else if(walkCount <= 0) walkReverse = false;
                 walkCount += walkReverse ? -1 : 1;
                 setNewFrame(WALK.frame + walkCount, 2.0f * 0.1f);
             }
             //Running State
-            else if(currentState == RUN.state) {
+            else if(currentState == RUN.state && !inAir) {
                 if(runCount >= runningFrameRate) runReverse = true;
                 else if(runCount <= 0) runReverse = false;
                 runCount += runReverse ? -1 : 1;
                 setNewFrame(runReverse ? frameIndex-1 : frameIndex+1 , 1.25f * 0.1f);
             }
             //Pre-Jump Frame
-            else if(currentDataFrame().getNextFrame() == JUMP.frame) {
-                setNewFrame(currentDataFrame().getNextFrame());
-                inAir = true;
-                accY = -10.f;
+            else if(currentDataFrame().getNextFrame() == JUMP.frame  && !inAir) {
+                setAccY(-9.f);
+                setNewFrame(JUMP.frame);
             }
+            //Jump state
+            else if(currentState == JUMP.state && inAir)
+                setNewFrame(JUMP.frame);
             //Any Other State
             else setNewFrame(currentDataFrame().getNextFrame());
         }
@@ -201,32 +219,8 @@ public class GameCharacter extends DataGameObj {
     private void setCurrentSprite() {
         picIndex = currentDataFrame().getPic();
         currentSprite = new Sprite(sprites[picIndex]);
-        setX(getX() + posX + accX);
-        setY(getY() + posY + gravity());
         setOriginX(currentSprite.getRegionWidth() - currentDataFrame().getCenterX());
         setOriginY(currentSprite.getRegionY() + currentDataFrame().getCenterY() / 2);
-    }
-
-    private float gravity() {
-        altitude = accY + (accY * - 0.3f) + 0.01f;
-        altitude = Math.min(altitude, 10f);
-        altitude = Math.max(altitude, -10f);
-        return !inAir ? 0f : accY + (accY * - 0.3f) + 0.01f;
-    }
-
-    private void setAccX(float newAccX) {
-        accX = Math.min(newAccX, 10f);
-        accX = Math.max(newAccX, -10f);
-    }
-
-    private void setAccY(float newAccY) {
-        accY = Math.min(newAccY, 10f);
-        accY = Math.max(newAccY, -10f);
-    }
-
-    private void setAccZ(float newAccZ) {
-        accZ = Math.min(newAccZ, 10f);
-        accZ = Math.max(newAccZ, -10f);
     }
 
     public boolean isMovable() {
@@ -238,12 +232,12 @@ public class GameCharacter extends DataGameObj {
     public boolean isFlippable() {
         return currentDataFrame().getState() == STAND.state
             || currentDataFrame().getState() == WALK.state
-            || currentDataFrame().getState() == JUMP.state
+            || (currentDataFrame().getState() == JUMP.state && inAir)
             || currentDataFrame().getState() == GUARD.state;
     }
 
     public boolean isJumpable() {
-        return weaponId > 0 ? isMovable() : false;
+        return weaponId <= 0 && isMovable();
     }
 
     private void setNewFrame(int index) {
@@ -258,52 +252,125 @@ public class GameCharacter extends DataGameObj {
         frameTimer = timer;
     }
 
-    public void movement() {
-        if(hitJ && isJumpable()) jump();
-        if(!isMovable()) return;
-        float movY = 0f, movX = 0f;
-
-        //Check pressed keys
-        if(keyUp && getZIndex() > 0) movY = -1f;
-        else if(keyDown && getZIndex() < Gdx.graphics.getHeight()) movY = 1f;
-        if(keyRight && getX() < Gdx.graphics.getWidth()) movX = 2f;
-        else if(keyLeft && getX() > 0) movX = -2f;
-
-        //Case horizontal movement
-        if(movX != 0 || movY != 0) {
-            //Flip X
-            if(movX > 0 && isFlippable())
-                right = true;
-            else if(movX < 0 && isFlippable())
-                right = false;
-            //Z axis
-            if(movY != 0) setZIndex(Math.max(getZIndex() + (int) movY, 0));
-            //Dual movement
-            if(movX != 0 && movY != 0) {
-                movX = movX * 0.75f;
-                movY = movY * 0.75f;
-            }
-            //Start walking frame
-            if(currentDataFrame().getState() == STAND.state) {
-                setNewFrame(WALK.frame, 2.0f * 0.1f);
-            }
-        }
-        //Case no horizontal movement
-        else {
-            walkCount = runCount = 0;
-            walkReverse = runReverse = false;
-            if(currentDataFrame().getState() == WALK.state)
-                setNewFrame(STAND.frame);
-        }
-
-        posX = Math.max(posX + movX + currentDataFrame().getDvx(), 0);
-        posY += movY + currentDataFrame().getDvy();
-    }
-
-    private void jump() {
-        if(currentDataFrame().getState() == STAND.state || currentDataFrame().getState() == WALK.state) {
+    private void preJump() {
+        if(currentDataFrame().getState() == STAND.state || currentDataFrame().getState() == WALK.state  && !inAir) {
             setNewFrame(PRE_JUMP.frame);
         }
+    }
+
+    private void updateZ(int z) {
+        setY(posZ + z);
+        setZIndex((int) (1000 + posZ + z));
+    }
+
+    public boolean isInsideStageBoundX() {
+        return getX() > ((DefaultStage) getStage()).boundX;
+    }
+
+    public boolean isInsideStageBoundW() {
+        return getX() < ((DefaultStage) getStage()).boundW;
+    }
+
+    public boolean isInsideStageBoundZ1() { return getZIndex() > ((DefaultStage) getStage()).boundZ1; }
+
+    public boolean isInsideStageBoundZ2() {
+        return getZIndex() < ((DefaultStage) getStage()).boundZ2;
+    }
+
+    public float diferenceStageBoundZ1(float z) { return getZIndex() + z - ((DefaultStage) getStage()).boundZ1; }
+
+    public float diferenceStageBoundZ2(float z) { return getZIndex() + z - ((DefaultStage) getStage()).boundZ2; }
+
+    public float getObjectiveX() { return getRelativeSideX() + currentDataFrame().getCenterX() * getModBySide(); }
+
+    public float getObjectiveY() { return getY() + currentDataFrame().getCenterY(); }
+
+    public float getObjectiveZ() { return posZ + getHeight(); }
+
+    public void movement() {
+        if(hitJ && isJumpable()) preJump();
+        float movZ = 0f, movX = 0f;
+
+        //Check pressed keys
+        if (keyUp) movZ = -1f;
+        else if (keyDown) movZ = 1f;
+        if (keyRight) movX = 2f;
+        else if (keyLeft) movX = -2f;
+
+        //Flip X
+        if (movX > 0 && isFlippable()) right = true;
+        else if (movX < 0 && isFlippable()) right = false;
+
+        //Basic movement
+        if(isMovable()) {
+            //Basic movement in X axis
+            if (movX != 0 || movZ != 0) {
+                //Dual movement
+                if (movX != 0 && movZ != 0) {
+                    movX = movX * 0.75f;
+                    movZ = movZ * 0.75f;
+                }
+                //Start walking frame
+                if (currentDataFrame().getState() == STAND.state) {
+                    setNewFrame(WALK.frame, 2.0f * 0.1f);
+                }
+            }
+            //No keys pressed
+            else {
+                walkCount = runCount = 0;
+                walkReverse = runReverse = false;
+                if (currentDataFrame().getState() == WALK.state)
+                    setNewFrame(STAND.frame);
+            }
+        } else {
+            movZ = 0f;
+            movX = 0f;
+            walkCount = runCount = 0;
+            walkReverse = runReverse = false;
+        }
+
+        //Update positions
+        setLocation(movX, movZ);
+    }
+
+    public void setLocation(float movX, float movZ) {
+        movX = movX + accX;
+
+        if(posX + getObjectiveX() + movX < ((DefaultStage)getStage()).boundX) movX = 0;
+        if(posX + getObjectiveX() + movX > ((DefaultStage)getStage()).boundW) movX = 0;
+        if(getObjectiveZ() + movZ < ((DefaultStage)getStage()).boundZ1) movZ = 0;
+        if(getObjectiveZ() + movZ > ((DefaultStage)getStage()).boundZ2) movZ = 0;
+
+        posX = getX() + posX + movX;
+        posZ = getY() + posZ + movZ;
+
+        setX(posX);
+        setY(posZ + posY);
+        //setZIndex((int) (getZIndex() + posZ));
+    }
+
+    private void doGravity() {
+        posY += accY;
+        inAir = posY <= -1;
+        setAccY(!inAir ? 0f : accY + Math.abs(accY * 0.3f) + 0.005f); // + 0.01f ?
+        if(inAir) setFrameIndex(JUMP.frame);
+        else posY = 0;
+    }
+
+    private void setAccX(float newAccX) {
+        accX = Math.min(newAccX, MAX_ACC_X);
+        accX = Math.max(newAccX, -MAX_ACC_X);
+    }
+
+    private void setAccY(float newAccY) {
+        accY = newAccY;
+        if(accY > 0) accY = Math.min(accY, MAX_ACC_Y);
+        else if(accY < 0) accY = Math.max(accY, -MAX_ACC_Y);
+    }
+
+    private void setAccZ(float newAccZ) {
+        accZ = Math.min(newAccZ, MAX_ACC_Z);
+        accZ = Math.max(newAccZ, -MAX_ACC_Z);
     }
 
     private void setFaceSide() {
@@ -320,6 +387,7 @@ public class GameCharacter extends DataGameObj {
 
     @Override
     public void draw(Batch batch, float parentAlpha) {
+        doGravity();
         movement();
         checkNewFrame();
         setCurrentSprite();
@@ -329,11 +397,6 @@ public class GameCharacter extends DataGameObj {
         batch.end();
         Gdx.graphics.getGL20().glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-        zRenderer.setProjectionMatrix(batch.getProjectionMatrix());
-        zRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        zRenderer.setColor(1f, 0f, 0f, 0.33f);
-        zRenderer.rect(0, getZIndex(), Gdx.graphics.getWidth(), 5);
-        zRenderer.end();
         if(currentDataFrame().getBodies().size() > 0) {
             bodyRenderer.setProjectionMatrix(batch.getProjectionMatrix());
             bodyRenderer.begin(ShapeRenderer.ShapeType.Filled);
@@ -345,14 +408,21 @@ public class GameCharacter extends DataGameObj {
                 currentDataFrame().getBodies().get(0).h);
             bodyRenderer.end();
         }
+        zRenderer.setProjectionMatrix(batch.getProjectionMatrix());
+        zRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        zRenderer.setColor(1f, 0f, 0f, 1f);
+        zRenderer.rect(((DefaultStage)getStage()).boundX, getObjectiveZ(), ((DefaultStage)getStage()).boundW, 1);
+        zRenderer.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
 
-        //Drawing the sprite
         batch.begin();
-        batch.draw(currentSprite, getX(), getY(), getWidth(), getHeight());
-        //batch.draw(batch, deltaTime);
+        //Drawing the sprite
+        batch.draw(currentSprite, (int) getX(), getY(), (int) getWidth(), getHeight()); //batch.draw(batch, deltaTime);
+        //Drawing numbers
+        drawDebugInfo(batch);
         batch.end();
 
+        //Drawing center point
         centerRenderer.setProjectionMatrix(batch.getProjectionMatrix());
         centerRenderer.begin(ShapeRenderer.ShapeType.Filled);
         centerRenderer.setColor(1f, 0f, 0f, 1f);
@@ -363,6 +433,36 @@ public class GameCharacter extends DataGameObj {
         frameTimer -= Gdx.graphics.getDeltaTime();
 
         setBoundsPerSprite();
+    }
+
+    private void drawDebugInfo(Batch batch) {
+        //Char
+        font.draw(batch, "X: " + getX(), 0, 0);
+        font.draw(batch, "Y: " + getY(), 150, 0);
+        font.draw(batch, "Z: " + posZ, 300, 0);
+        font.draw(batch, "Altitude: " + posY, 450, 0);
+        font.draw(batch, "ObjectiveX: " + getObjectiveX(), 600, 0);
+        font.draw(batch, "ObjectiveY: " + getObjectiveY(), 800, 0);
+        font.draw(batch, "ObjectiveZ: " + getObjectiveZ(), 1000, 0);
+        font.draw(batch, "AccX: " + accX, 0, 20);
+        font.draw(batch, "AccY: " + accY, 150, 20);
+        font.draw(batch, "AccZ: " + accZ, 300, 20);
+        font.draw(batch, "InAir: " + (inAir ? "true" : "false"), 450, 20);
+
+        //Keys
+        if(keyLeft) font.draw(batch, "Left", 0, Gdx.graphics.getHeight()-40);
+        if(keyUp) font.draw(batch, "Up", 75, Gdx.graphics.getHeight()-40);
+        if(keyRight) font.draw(batch, "Right", 150, Gdx.graphics.getHeight()-40);
+        if(keyDown) font.draw(batch, "Down", 225, Gdx.graphics.getHeight()-40);
+        if(hitA) font.draw(batch, "Attack", 300, Gdx.graphics.getHeight()-40);
+        if(hitJ) font.draw(batch, "Jump", 375, Gdx.graphics.getHeight()-40);
+        if(hitD) font.draw(batch, "Defense", 425, Gdx.graphics.getHeight()-40);
+
+        //Stage
+        font.draw(batch, "StageX: " + ((DefaultStage) getStage()).boundX, 0, Gdx.graphics.getHeight()-20);
+        font.draw(batch, "StageW: " + ((DefaultStage) getStage()).boundW, 150, Gdx.graphics.getHeight()-20);
+        font.draw(batch, "StageZ1: " + ((DefaultStage) getStage()).boundZ1, 300, Gdx.graphics.getHeight()-20);
+        font.draw(batch, "StageZ2: " + ((DefaultStage) getStage()).boundZ2, 450, Gdx.graphics.getHeight()-20);
     }
 
 }

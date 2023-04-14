@@ -1,5 +1,4 @@
 buildscript {
-    
 
     repositories {
         mavenLocal()
@@ -44,12 +43,22 @@ allprojects {
 project(":desktop") {
     apply plugin: "java-library"
 
+    compileJava {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
 
     dependencies {
+
         implementation project(":core")
+        api "com.badlogicgames.gdx:gdx-tools:$gdxVersion"
         api "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
         api "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
-        
+
+        implementation "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
+
+
+
     }
 }
 
@@ -59,13 +68,17 @@ project(":html") {
     apply plugin: "war"
     apply plugin: "org.gretty"
 
+    compileJava {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
 
     dependencies {
         implementation project(":core")
         api "com.badlogicgames.gdx:gdx-backend-gwt:$gdxVersion"
         api "com.badlogicgames.gdx:gdx:$gdxVersion:sources"
         api "com.badlogicgames.gdx:gdx-backend-gwt:$gdxVersion:sources"
-        
+
     }
 }
 
@@ -75,6 +88,12 @@ project(":core") {
 
     dependencies {
         api "com.badlogicgames.gdx:gdx:$gdxVersion"
-        
+        implementation "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
     }
 }
+
+//dependencies {
+////    implementation 'com.github.intrigus.gdx-freetype-gwt:gdx-freetype-gwt:1.9.10.1'
+//    implementation 'com.badlogicgames.gdx:gdx-freetype:1.11.0'
+//    implementation 'com.badlogicgames.gdx:gdx-freetype-platform:1.11.0'
+//}

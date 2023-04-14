@@ -15,7 +15,7 @@ public class DesktopLauncher {
 		config.setResizable(false);
 		config.useVsync(true);
 		Graphics.DisplayMode displayMode = Lwjgl3ApplicationConfiguration.getDisplayMode();
-		config.setWindowedMode(displayMode.width, displayMode.height);
+		config.setWindowedMode((int)(displayMode.width * 0.9), (int)(displayMode.height * 0.9));
 		new Lwjgl3Application(new App(), config);
 	}
 }
