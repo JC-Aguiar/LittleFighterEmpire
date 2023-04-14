@@ -37,9 +37,8 @@ public class GameCharacter extends DataGameObj {
     Sprite currentSprite;
 
     int runTimer; //only for player
-    private ShapeRenderer zRenderer = new ShapeRenderer(); //TODO: teste! remove!
-    private ShapeRenderer centerRenderer = new ShapeRenderer(); //TODO: teste! remove!
-    private ShapeRenderer bodyRenderer = new ShapeRenderer(); //TODO: teste! remove!
+
+    private ShapeRenderer debugRenderer = new ShapeRenderer(); //TODO: teste! remove!
     BitmapFont font;  //TODO: teste! remove!
 
     //STATUS
@@ -70,9 +69,9 @@ public class GameCharacter extends DataGameObj {
     float startX, startZ;
     int weaponId, grabId = -1;
     int hitLag;
-    public static final float MAX_ACC_X = 10f;
-    public static final float  MAX_ACC_Y = 10f;
-    public static final float  MAX_ACC_Z = 10f;
+    public static final float MAX_ACC_X = 50f;
+    public static final float  MAX_ACC_Y = 100f;
+    public static final float  MAX_ACC_Z = 50f;
 
     //INPUTS
     boolean keyUp, keyDown, keyLeft, keyRight;
@@ -199,8 +198,21 @@ public class GameCharacter extends DataGameObj {
             }
             //Pre-Jump Frame
             else if(currentDataFrame().getNextFrame() == JUMP.frame  && !inAir) {
-                setAccY(-9.f);
+                setAccY(-9f);
                 setNewFrame(JUMP.frame);
+                float movX = 0f, movZ = 0f;
+                if(keyUp) movZ = -1.5f;
+                else if(keyDown) movZ = 1.5f;
+                if(keyRight) movX = 5f;
+                else if(keyLeft) movX = -5f;
+                if (movX != 0 && movZ != 0) {
+                    movX = movX * 0.75f;
+                    movZ = movZ * 0.75f;
+                }
+                movX += accX;
+                movZ += accZ;
+                setAccX(movX);
+                setAccZ(movZ);
             }
             //Jump state
             else if(currentState == JUMP.state && inAir)
@@ -334,16 +346,21 @@ public class GameCharacter extends DataGameObj {
     }
 
     public void setLocation(float movX, float movZ) {
-        movX = movX + accX;
+        //Apply gravity (Y axis)
+        doGravity();
 
+        //Set and check X/Z axis values
+        doAcceleration();
+        movX = movX + accX;
+        movZ = movZ + accZ;
         if(posX + getObjectiveX() + movX < ((DefaultStage)getStage()).boundX) movX = 0;
         if(posX + getObjectiveX() + movX > ((DefaultStage)getStage()).boundW) movX = 0;
         if(getObjectiveZ() + movZ < ((DefaultStage)getStage()).boundZ1) movZ = 0;
         if(getObjectiveZ() + movZ > ((DefaultStage)getStage()).boundZ2) movZ = 0;
-
         posX = getX() + posX + movX;
         posZ = getY() + posZ + movZ;
 
+        //Set X/Z axis position
         setX(posX);
         setY(posZ + posY);
         //setZIndex((int) (getZIndex() + posZ));
@@ -352,14 +369,29 @@ public class GameCharacter extends DataGameObj {
     private void doGravity() {
         posY += accY;
         inAir = posY <= -1;
-        setAccY(!inAir ? 0f : accY + Math.abs(accY * 0.3f) + 0.005f); // + 0.01f ?
-        if(inAir) setFrameIndex(JUMP.frame);
-        else posY = 0;
+        setAccY(!inAir ? 0f : accY + Math.abs(accY * 0.1f) + 0.1f);
+        if(inAir)
+            setFrameIndex(JUMP.frame);
+        else {
+            if(frameIndex == JUMP.frame) setFrameIndex(CROUCH.frame);
+            posY = 0;
+        }
+    }
+
+    private void doAcceleration() {
+        //Calculate acceleration X/Z axis when in the ground
+        if(!inAir) setAccX(accX - accX * 0.1f);
+        if(!inAir) setAccZ(accZ - accZ * 0.1f);
+
+        //Check minimum acceleration until become 0
+        if(accX > -0.1f && accX < 0.1f) setAccX(0f);
+        if(accZ > -0.1f && accZ < 0.1f) setAccZ(0f);
     }
 
     private void setAccX(float newAccX) {
-        accX = Math.min(newAccX, MAX_ACC_X);
-        accX = Math.max(newAccX, -MAX_ACC_X);
+        accX = newAccX;
+        if(accX > 0) accX = Math.min(accX, MAX_ACC_X);
+        else if(accX < 0) accX = Math.max(accX, -MAX_ACC_X);
     }
 
     private void setAccY(float newAccY) {
@@ -369,8 +401,9 @@ public class GameCharacter extends DataGameObj {
     }
 
     private void setAccZ(float newAccZ) {
-        accZ = Math.min(newAccZ, MAX_ACC_Z);
-        accZ = Math.max(newAccZ, -MAX_ACC_Z);
+        accZ = newAccZ;
+        if(accZ > 0) accZ = Math.min(accZ, MAX_ACC_Z);
+        else if(accZ < 0) accZ = Math.max(accZ, -MAX_ACC_Z);
     }
 
     private void setFaceSide() {
@@ -387,7 +420,6 @@ public class GameCharacter extends DataGameObj {
 
     @Override
     public void draw(Batch batch, float parentAlpha) {
-        doGravity();
         movement();
         checkNewFrame();
         setCurrentSprite();
@@ -398,21 +430,26 @@ public class GameCharacter extends DataGameObj {
         Gdx.graphics.getGL20().glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         if(currentDataFrame().getBodies().size() > 0) {
-            bodyRenderer.setProjectionMatrix(batch.getProjectionMatrix());
-            bodyRenderer.begin(ShapeRenderer.ShapeType.Filled);
-            bodyRenderer.setColor(0.5f, 0f, 0.5f, 1f);
-            bodyRenderer.rect(
+            debugRenderer.setProjectionMatrix(batch.getProjectionMatrix());
+            debugRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            debugRenderer.setColor(0.5f, 0f, 0.5f, 0.5f);
+            debugRenderer.rect(
                 getRelativeSideX() + currentDataFrame().getBodies().get(0).x * getModBySide(),
                 getY() + currentDataFrame().getBodies().get(0).y,
                 currentDataFrame().getBodies().get(0).w * getModBySide(),
                 currentDataFrame().getBodies().get(0).h);
-            bodyRenderer.end();
+            debugRenderer.end();
         }
-        zRenderer.setProjectionMatrix(batch.getProjectionMatrix());
-        zRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        zRenderer.setColor(1f, 0f, 0f, 1f);
-        zRenderer.rect(((DefaultStage)getStage()).boundX, getObjectiveZ(), ((DefaultStage)getStage()).boundW, 1);
-        zRenderer.end();
+
+        //Drawing shadow
+        Gdx.graphics.getGL20().glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        debugRenderer.setProjectionMatrix(batch.getProjectionMatrix());
+        debugRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        debugRenderer.setColor(0f, 0f, 0f, 0.5f);
+        debugRenderer.rect(getObjectiveX() - 15f, getObjectiveZ() - 10f, 30f, 10f);
+//        debugRenderer.scale(1.5f, 0.5f, 1f);
+        debugRenderer.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
 
         batch.begin();
@@ -423,11 +460,11 @@ public class GameCharacter extends DataGameObj {
         batch.end();
 
         //Drawing center point
-        centerRenderer.setProjectionMatrix(batch.getProjectionMatrix());
-        centerRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        centerRenderer.setColor(1f, 0f, 0f, 1f);
-        centerRenderer.circle(getX() + getOriginX(), getY() + getOriginY(), 2f);
-        centerRenderer.end();
+        debugRenderer.setProjectionMatrix(batch.getProjectionMatrix());
+        debugRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        debugRenderer.setColor(1f, 0f, 0f, 1f);
+        debugRenderer.circle(getX() + getOriginX(), getY() + getOriginY(), 2f);
+        debugRenderer.end();
         batch.begin();
 
         frameTimer -= Gdx.graphics.getDeltaTime();

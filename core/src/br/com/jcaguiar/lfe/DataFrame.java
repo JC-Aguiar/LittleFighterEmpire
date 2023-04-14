@@ -112,8 +112,8 @@ public class DataFrame {
         if(bdy.z1 == 0)   bdy.z1 =    Optional.ofNullable(keyValues.get("z1")).orElse(0);
         if(bdy.z2 == 0)   bdy.z2 =    Optional.ofNullable(keyValues.get("z2")).orElse(0);
 
-        if(bdy.z1 == 0)   bdy.z1 = 15;
-        if(bdy.z2 == 0)   bdy.z2 = 15;
+        if(bdy.z1 == 0)   bdy.z1 = 5;
+        if(bdy.z2 == 0)   bdy.z2 = 5;
 
         bodies.add(bdy);
     }
@@ -202,8 +202,8 @@ public class DataFrame {
         if(itr.id == 0)         itr.id =            Optional.ofNullable(keyValues.get("id")).orElse(0);
 
         //set default z1 z2 if 0
-        if(itr.z1 == 0) itr.z1 = 15;
-        if(itr.z2 == 0) itr.z2 = 15;
+        if(itr.z1 == 0) itr.z1 = 5;
+        if(itr.z2 == 0) itr.z2 = 5;
 
         interactions.add(itr);
     }
