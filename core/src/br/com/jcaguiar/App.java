@@ -40,7 +40,7 @@ public class App extends ApplicationAdapter {
 		Gdx.input.setInputProcessor(stage);
 		stage.setKeyboardFocus(davis);
 
-		davis.startVSMode(500, 255, 0, 300, true, 0, 50);
+		davis.startVSMode(500, 255, 0, 0, true, 0, 50);
 	}
 	
 	@Override

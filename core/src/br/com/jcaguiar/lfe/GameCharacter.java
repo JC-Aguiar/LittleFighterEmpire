@@ -35,9 +35,9 @@ public class GameCharacter extends DataGameObj {
     int walkCount, runCount = 0;
     boolean walkReverse, runReverse = false;
     Sprite currentSprite;
+    boolean punch1 = false;
 
     int runTimer; //only for player
-
     private ShapeRenderer debugRenderer = new ShapeRenderer(); //TODO: teste! remove!
     BitmapFont font;  //TODO: teste! remove!
 
@@ -77,6 +77,7 @@ public class GameCharacter extends DataGameObj {
     boolean keyUp, keyDown, keyLeft, keyRight;
     boolean hitRun;
     boolean hitA, hitJ, hitD, hitJA, hitDfA, hitDuA, hitDdA, hitDfJ, hitDuJ, hitDdJ, hitDAJ;
+    int holdA, holdJ, timerA, timerJ;
 
     //SCORE
     int totalDamage, totalInjury, totalMpCost, totalKills, totalDeaths, totalItens = 0;
@@ -159,10 +160,10 @@ public class GameCharacter extends DataGameObj {
         this.posX = posX;
         this.posY = 0;
         this.posZ = posZ;
-        movement();
-        checkNewFrame();
         setCurrentSprite();
         setFaceSide();
+        movement();
+        checkNewFrame();
 //        setRandomPosition();
     }
 
@@ -198,7 +199,11 @@ public class GameCharacter extends DataGameObj {
             }
             //Pre-Jump Frame
             else if(currentDataFrame().getNextFrame() == JUMP.frame  && !inAir) {
-                setAccY(-9f);
+                if(holdJ > 5 && holdJ < 20) {
+                    setNewFrame(PRE_JUMP.frame+1);
+                    return;
+                }
+                setAccY(holdJ >= 20 ? -14f : -9f);
                 setNewFrame(JUMP.frame);
                 float movX = 0f, movZ = 0f;
                 if(keyUp) movZ = -1.5f;
@@ -214,16 +219,26 @@ public class GameCharacter extends DataGameObj {
                 setAccX(movX);
                 setAccZ(movZ);
             }
-            //Jump state
+            //Jump State
             else if(currentState == JUMP.state && inAir)
                 setNewFrame(JUMP.frame);
+            //Land Frame
+            else if(frameIndex == CROUCH.frame)
+                if(accX > 1 || accX < -1 || accZ > 1 || accZ < -1) setNewFrame(CROUCH.frame);
+                else setNewFrame(currentDataFrame().getNextFrame());
+            //Defend/Guard State
+            else if(frameIndex == GUARD.frame)
+                if(hitD) setNewFrame(GUARD.frame);
+                else setNewFrame(currentDataFrame().getNextFrame());
             //Any Other State
             else setNewFrame(currentDataFrame().getNextFrame());
         }
     }
 
     private void setBoundsPerSprite() {
-        setBounds(currentSprite.getX(), currentSprite.getY(),
+//        currentSprite.setCenter(currentSprite.getWidth()/2, 0f);
+        setBounds(currentSprite.getX(),
+                  currentSprite.getY(),
                   currentSprite.getWidth(),
                   currentSprite.getHeight());
     }
@@ -231,8 +246,11 @@ public class GameCharacter extends DataGameObj {
     private void setCurrentSprite() {
         picIndex = currentDataFrame().getPic();
         currentSprite = new Sprite(sprites[picIndex]);
-        setOriginX(currentSprite.getRegionWidth() - currentDataFrame().getCenterX());
-        setOriginY(currentSprite.getRegionY() + currentDataFrame().getCenterY() / 2);
+        currentSprite.setOriginCenter();
+//        currentSprite.setPosition(40, 0);
+//        setOriginX((float) currentSprite.getRegionWidth()/2);
+//        setOriginY(currentSprite.getRegionY() + currentDataFrame().getCenterY() / 2);
+//        currentSprite.setCenter(0f, 0f);
     }
 
     public boolean isMovable() {
@@ -250,6 +268,14 @@ public class GameCharacter extends DataGameObj {
 
     public boolean isJumpable() {
         return weaponId <= 0 && isMovable();
+    }
+
+    public boolean isAttackable() {
+        return currentDataFrame().getState() == STAND.state
+            || currentDataFrame().getState() == WALK.state
+            || currentDataFrame().getState() == RUN.state
+            || currentDataFrame().getState() == JUMP.state
+            || currentDataFrame().getState() == DASH_FRONT.state;
     }
 
     private void setNewFrame(int index) {
@@ -293,21 +319,32 @@ public class GameCharacter extends DataGameObj {
 
     public float diferenceStageBoundZ2(float z) { return getZIndex() + z - ((DefaultStage) getStage()).boundZ2; }
 
-    public float getObjectiveX() { return getRelativeSideX() + currentDataFrame().getCenterX() * getModBySide(); }
+    public float getObjectiveX() { return getRelativeBodyX() + getWidth() * getModBySide() - currentDataFrame().getCenterX() * getModBySide(); }
 
     public float getObjectiveY() { return getY() + currentDataFrame().getCenterY(); }
 
     public float getObjectiveZ() { return posZ + getHeight(); }
 
+    public boolean isMovingForward() {
+        return right ? accX > 0 : accX < 0;
+    }
+
     public void movement() {
-        if(hitJ && isJumpable()) preJump();
         float movZ = 0f, movX = 0f;
 
-        //Check pressed keys
+        //Check movement keys
         if (keyUp) movZ = -1f;
         else if (keyDown) movZ = 1f;
         if (keyRight) movX = 2f;
         else if (keyLeft) movX = -2f;
+        timerA = timerA <= 0 ? 0 : timerA--;
+        timerJ = timerJ <= 0 ? 0 : timerJ--;
+
+        //Check key trigger
+        if(hitD && timerA > 0 && movZ < 0 && isAttackable()) setNewFrame(300);
+        if(hitA && holdA == 0 && isAttackable()) basicAttack();
+        if(hitJ && holdJ == 0 && isJumpable()) preJump();
+        if(hitD && isAttackable()) setNewFrame(GUARD.frame);
 
         //Flip X
         if (movX > 0 && isFlippable()) right = true;
@@ -341,16 +378,43 @@ public class GameCharacter extends DataGameObj {
             walkReverse = runReverse = false;
         }
 
+        //Check action keys
+        if(hitA) {
+            if(holdA == 0) timerA = 5;
+            holdA += 1;
+        }  else holdA = 0;
+        if(hitJ) {
+            if(holdJ == 0) timerJ = 5;
+            holdJ += 1;
+        } else holdJ = 0;
+
         //Update positions
         setLocation(movX, movZ);
     }
 
-    public void setLocation(float movX, float movZ) {
-        //Apply gravity (Y axis)
-        doGravity();
+    private void basicAttack() {
+        val currentState = currentDataFrame().getState();
+        //Normal attack
+        if(currentState == STAND.state || currentState == WALK.state)
+            setNewFrame(!punch1 ? ATTACK_1.frame : ATTACK_2.frame);
+        //Running attack
+        else if(currentState == RUN.state)
+            setNewFrame(RUN_ATTACK.frame);
+        //Jump attack
+        else if(currentState == JUMP.state && inAir)
+            setNewFrame(JUMP_ATTACK.frame);
+        //Dash attack
+        else if(currentState == DASH_FRONT.state && isMovingForward() && inAir)
+            setNewFrame(DASH_ATTACK.frame);
+        punch1 = !punch1;
+    }
 
-        //Set and check X/Z axis values
-        doAcceleration();
+    public void setLocation(float movX, float movZ) {
+        //Apply gravity and set X/Y/Z acceleration values
+        doGravity();
+        doAcceleration(movZ);
+
+        //Apply X/Z acceleration to movement
         movX = movX + accX;
         movZ = movZ + accZ;
         if(posX + getObjectiveX() + movX < ((DefaultStage)getStage()).boundX) movX = 0;
@@ -364,28 +428,61 @@ public class GameCharacter extends DataGameObj {
         setX(posX);
         setY(posZ + posY);
         //setZIndex((int) (getZIndex() + posZ));
+        //Z < 1000: Foreground (Game Background)
+        //Z < 2000: Middle (Game Objects)
+        //Z >= 2000: Front (Game UI)
     }
 
     private void doGravity() {
-        posY += accY;
-        inAir = posY <= -1;
-        setAccY(!inAir ? 0f : accY + Math.abs(accY * 0.1f) + 0.1f);
-        if(inAir)
-            setFrameIndex(JUMP.frame);
-        else {
-            if(frameIndex == JUMP.frame) setFrameIndex(CROUCH.frame);
+        if(posY > -1 && accY >= 0) {
+            setAccY(0f);
             posY = 0;
+            if(inAir) setFrameIndex(CROUCH.frame);
+            inAir = false;
+        } else {
+            setAccY(accY + Math.abs(accY * 0.1f) + 0.1f);
+            if(isMovable()) setFrameIndex(JUMP.frame);
+            inAir = true;
         }
+        posY += accY;
+//        inAir = posY <= -1;
+//        setAccY(!inAir ? 0f : accY + Math.abs(accY * 0.1f) + 0.1f);
+//        if(inAir)
+//            setFrameIndex(JUMP.frame);
+//        else {
+//            if(frameIndex == JUMP.frame) setFrameIndex(CROUCH.frame);
+//            posY = 0;
+//        }
     }
 
-    private void doAcceleration() {
-        //Calculate acceleration X/Z axis when in the ground
+    private void doAcceleration(float movZ) {
+        final int relativeDvx = currentDataFrame().getDvx() * getModBySide();
+        final boolean isDvz = currentDataFrame().getDvz() != 0 && movZ != 0;
+
+        //Apply acceleration when needed
+        if(relativeDvx != 0) setAccX(accX + relativeDvx * getDvxMod());
+        setAccY(accY + getDvyMod());
+        if(isDvz) setAccZ(accZ + getDvzMod() * (movZ < 0 ? -1 : 1));
+
+        //Calculate acceleration X/Z axis when in the ground (friction)
         if(!inAir) setAccX(accX - accX * 0.1f);
         if(!inAir) setAccZ(accZ - accZ * 0.1f);
 
-        //Check minimum acceleration until become 0
-        if(accX > -0.1f && accX < 0.1f) setAccX(0f);
-        if(accZ > -0.1f && accZ < 0.1f) setAccZ(0f);
+        //Check minimum valid acceleration value or become 0
+        if(accX > -0.05f && accX < 0.05f) setAccX(0f);
+        if(accZ > -0.05f && accZ < 0.05f) setAccZ(0f);
+    }
+
+    private float getDvxMod() {
+        return currentDataFrame().getDvx() * 0.01f + 0.03f;
+    }
+
+    private float getDvyMod() {
+        return currentDataFrame().getDvy() * 0.275f;
+    }
+
+    private float getDvzMod() {
+        return currentDataFrame().getDvz() * 0.01f + 0.03f;
     }
 
     private void setAccX(float newAccX) {
@@ -410,8 +507,12 @@ public class GameCharacter extends DataGameObj {
         currentSprite.flip(!right, true);
     }
 
-    public float getRelativeSideX() {
+    public float getRelativeBodyX() {
         return right ?  getX() : getX() + getWidth();
+    }
+
+    public float getDisplayX() {
+        return getX() + (getWidth()/2) * getModBySide() - currentDataFrame().getCenterX() * getModBySide();
     }
 
     private int getModBySide() {
@@ -420,6 +521,7 @@ public class GameCharacter extends DataGameObj {
 
     @Override
     public void draw(Batch batch, float parentAlpha) {
+        setBoundsPerSprite();
         movement();
         checkNewFrame();
         setCurrentSprite();
@@ -434,7 +536,7 @@ public class GameCharacter extends DataGameObj {
             debugRenderer.begin(ShapeRenderer.ShapeType.Filled);
             debugRenderer.setColor(0.5f, 0f, 0.5f, 0.5f);
             debugRenderer.rect(
-                getRelativeSideX() + currentDataFrame().getBodies().get(0).x * getModBySide(),
+                getRelativeBodyX() + currentDataFrame().getBodies().get(0).x * getModBySide(),
                 getY() + currentDataFrame().getBodies().get(0).y,
                 currentDataFrame().getBodies().get(0).w * getModBySide(),
                 currentDataFrame().getBodies().get(0).h);
@@ -454,22 +556,25 @@ public class GameCharacter extends DataGameObj {
 
         batch.begin();
         //Drawing the sprite
-        batch.draw(currentSprite, (int) getX(), getY(), (int) getWidth(), getHeight()); //batch.draw(batch, deltaTime);
+        batch.draw(currentSprite, (int) getDisplayX(), getY(), (int) getWidth(), getHeight()); //batch.draw(batch, deltaTime);
         //Drawing numbers
         drawDebugInfo(batch);
         batch.end();
+
+        //(int) getX() - currentDataFrame().getCenterX() * getModBySide()
+        //getRelativeSideX()
 
         //Drawing center point
         debugRenderer.setProjectionMatrix(batch.getProjectionMatrix());
         debugRenderer.begin(ShapeRenderer.ShapeType.Filled);
         debugRenderer.setColor(1f, 0f, 0f, 1f);
-        debugRenderer.circle(getX() + getOriginX(), getY() + getOriginY(), 2f);
+        debugRenderer.circle(getObjectiveX(), getObjectiveY(), 2f);
         debugRenderer.end();
         batch.begin();
 
-        frameTimer -= Gdx.graphics.getDeltaTime();
 
-        setBoundsPerSprite();
+
+        frameTimer -= Gdx.graphics.getDeltaTime();
     }
 
     private void drawDebugInfo(Batch batch) {

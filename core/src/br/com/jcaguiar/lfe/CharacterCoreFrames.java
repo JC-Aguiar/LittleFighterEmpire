@@ -1,5 +1,6 @@
 package br.com.jcaguiar.lfe;
 
+
 public enum CharacterCoreFrames {
 
     STAND(0, 0, false, true),
