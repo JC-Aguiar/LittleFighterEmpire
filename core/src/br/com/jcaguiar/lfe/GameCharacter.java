@@ -20,6 +20,8 @@ import lombok.val;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static br.com.jcaguiar.lfe.CharacterCoreFrames.*;
 
@@ -341,7 +343,8 @@ public class GameCharacter extends DataGameObj {
         timerJ = timerJ <= 0 ? 0 : timerJ--;
 
         //Check key trigger
-        if(hitD && timerA > 0 && movZ < 0 && isAttackable()) setNewFrame(300);
+        final int skillFrame = checkSkillTrigger(movX, movZ);
+        if(skillFrame != 0) setNewFrame(skillFrame);
         if(hitA && holdA == 0 && isAttackable()) basicAttack();
         if(hitJ && holdJ == 0 && isJumpable()) preJump();
         if(hitD && isAttackable()) setNewFrame(GUARD.frame);
@@ -390,6 +393,23 @@ public class GameCharacter extends DataGameObj {
 
         //Update positions
         setLocation(movX, movZ);
+    }
+
+    private int checkSkillTrigger(float movX, float movZ) {
+        if(!hitD) return 0;
+        final Map<CharacterSkillCommand, Integer> mapSkillCommands = currentDataFrame().getSkillCommands();
+        for(CharacterSkillCommand cmd : mapSkillCommands.keySet()) {
+            switch(cmd){
+                case HIT_UA: if(timerA > 0 && movZ < 0)   return mapSkillCommands.get(cmd);
+                case HIT_FA: if(timerA > 0 && movX != 0)  return mapSkillCommands.get(cmd);
+                case HIT_DA: if(timerA > 0 && movZ > 0)   return mapSkillCommands.get(cmd);
+                case HIT_UJ: if(timerJ > 0 && movZ < 0)   return mapSkillCommands.get(cmd);
+                case HIT_FJ: if(timerJ > 0 && movX != 0)  return mapSkillCommands.get(cmd);
+                case HIT_DJ: if(timerJ > 0 && movZ > 0)   return mapSkillCommands.get(cmd);
+                case HIT_AJ: if(timerA > 0 && timerJ > 0) return mapSkillCommands.get(cmd);
+            }
+        }
+        return 0;
     }
 
     private void basicAttack() {

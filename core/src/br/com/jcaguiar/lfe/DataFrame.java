@@ -3,10 +3,9 @@ package br.com.jcaguiar.lfe;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+
+import static br.com.jcaguiar.lfe.CharacterSkillCommand.*;
 
 @Getter
 @Setter
@@ -80,6 +79,18 @@ public class DataFrame {
         overall.z1 = zMin;
         overall.z2 = zMax;
         return overall;
+    }
+
+    public Map<CharacterSkillCommand, Integer> getSkillCommands() {
+        final Map<CharacterSkillCommand, Integer> mapSkillCommands = new HashMap<>(7);
+        if(hit_Ua != 0) mapSkillCommands.put(HIT_UA, hit_Ua);
+        if(hit_Fa != 0) mapSkillCommands.put(HIT_FA, hit_Fa);
+        if(hit_Da != 0) mapSkillCommands.put(HIT_DA, hit_Da);
+        if(hit_Uj != 0) mapSkillCommands.put(HIT_UJ, hit_Uj);
+        if(hit_Fj != 0) mapSkillCommands.put(HIT_FJ, hit_Fj);
+        if(hit_Dj != 0) mapSkillCommands.put(HIT_DJ, hit_Dj);
+        if(hit_ja != 0) mapSkillCommands.put(HIT_AJ, hit_ja);
+        return mapSkillCommands;
     }
 
     public void setAttribute(Map<String, Integer> keyValues, DataFrameScope frameKey) {
