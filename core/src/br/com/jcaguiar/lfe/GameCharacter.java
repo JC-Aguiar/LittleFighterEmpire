@@ -20,10 +20,10 @@ import lombok.val;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
+import static br.com.jcaguiar.lfe.CharacterCommandKeyword.*;
 import static br.com.jcaguiar.lfe.CharacterCoreFrames.*;
+import static br.com.jcaguiar.lfe.CharacterFrameKeyword.*;
 
 @Setter
 @Getter
@@ -71,19 +71,21 @@ public class GameCharacter extends DataGameObj {
     float startX, startZ;
     int weaponId, grabId = -1;
     int hitLag;
-    public static final float MAX_ACC_X = 50f;
-    public static final float  MAX_ACC_Y = 100f;
-    public static final float  MAX_ACC_Z = 50f;
+    public static final float MAX_ACC_X = 30f;
+    public static final float  MAX_ACC_Y = 50f;
+    public static final float  MAX_ACC_Z = 30f;
 
     //INPUTS
     boolean keyUp, keyDown, keyLeft, keyRight;
     boolean hitRun;
-    boolean hitA, hitJ, hitD, hitJA, hitDfA, hitDuA, hitDdA, hitDfJ, hitDuJ, hitDdJ, hitDAJ;
-    int holdA, holdJ, timerA, timerJ;
+    boolean hitA, hitJ, hitD, hitAJ, hitDfA, hitDuA, hitDdA, hitDfJ, hitDuJ, hitDdJ, hitDAJ;
+    int holdA, holdJ, timerA, timerJ, timerD;
 
     //SCORE
-    int totalDamage, totalInjury, totalMpCost, totalKills, totalDeaths, totalItens = 0;
-    //int totalHelp;            TODO: implement
+    int totalDamage, totalInjury, totalMpCost, totalKills, totalDeaths, totalItens;
+    //int totalCure;            TODO: implement
+    //int totalBuffs;            TODO: implement
+    //int totalNerfs;            TODO: implement
     //int totalMovement;        TODO: implement
 
     //ANIMATION
@@ -174,7 +176,7 @@ public class GameCharacter extends DataGameObj {
     }
 
     private void setFrameTimer() {
-        frameTimer = (float) currentDataFrame().getWait() * 0.1f;
+        frameTimer = (float) currentDataFrame().get(WAIT) * 0.08f;
     }
 
     private void checkValidFrame() {
@@ -184,7 +186,7 @@ public class GameCharacter extends DataGameObj {
 
     private void checkNewFrame() {
         if(frameTimer <= 0) {
-            val currentState = currentDataFrame().getState();
+            val currentState = currentDataFrame().get(STATE);
             //Walking State
             if(currentState == WALK.state && !inAir) {
                 if(walkCount >= walkingFrameRate) walkReverse = true;
@@ -200,7 +202,7 @@ public class GameCharacter extends DataGameObj {
                 setNewFrame(runReverse ? frameIndex-1 : frameIndex+1 , 1.25f * 0.1f);
             }
             //Pre-Jump Frame
-            else if(currentDataFrame().getNextFrame() == JUMP.frame  && !inAir) {
+            else if(currentDataFrame().get(NEXT_FRAME) == JUMP.frame  && !inAir) {
                 if(holdJ > 5 && holdJ < 20) {
                     setNewFrame(PRE_JUMP.frame+1);
                     return;
@@ -227,13 +229,13 @@ public class GameCharacter extends DataGameObj {
             //Land Frame
             else if(frameIndex == CROUCH.frame)
                 if(accX > 1 || accX < -1 || accZ > 1 || accZ < -1) setNewFrame(CROUCH.frame);
-                else setNewFrame(currentDataFrame().getNextFrame());
+                else setNewFrame(currentDataFrame().get(NEXT_FRAME));
             //Defend/Guard State
             else if(frameIndex == GUARD.frame)
                 if(hitD) setNewFrame(GUARD.frame);
-                else setNewFrame(currentDataFrame().getNextFrame());
+                else setNewFrame(currentDataFrame().get(NEXT_FRAME));
             //Any Other State
-            else setNewFrame(currentDataFrame().getNextFrame());
+            else setNewFrame(currentDataFrame().get(NEXT_FRAME));
         }
     }
 
@@ -246,26 +248,26 @@ public class GameCharacter extends DataGameObj {
     }
 
     private void setCurrentSprite() {
-        picIndex = currentDataFrame().getPic();
+        picIndex = currentDataFrame().get(PIC);
         currentSprite = new Sprite(sprites[picIndex]);
         currentSprite.setOriginCenter();
 //        currentSprite.setPosition(40, 0);
 //        setOriginX((float) currentSprite.getRegionWidth()/2);
-//        setOriginY(currentSprite.getRegionY() + currentDataFrame().getCenterY() / 2);
+//        setOriginY(currentSprite.getRegionY() + currentDataFrame().get(CENTER_Y) / 2);
 //        currentSprite.setCenter(0f, 0f);
     }
 
     public boolean isMovable() {
-        return currentDataFrame().getState() == STAND.state
-            || currentDataFrame().getState() == WALK.state
-            || currentDataFrame().getState() == RUN.state;
+        return currentDataFrame().get(STATE) == STAND.state
+            || currentDataFrame().get(STATE) == WALK.state
+            || currentDataFrame().get(STATE) == RUN.state;
     }
 
     public boolean isFlippable() {
-        return currentDataFrame().getState() == STAND.state
-            || currentDataFrame().getState() == WALK.state
-            || (currentDataFrame().getState() == JUMP.state && inAir)
-            || currentDataFrame().getState() == GUARD.state;
+        return currentDataFrame().get(STATE) == STAND.state
+            || currentDataFrame().get(STATE) == WALK.state
+            || (currentDataFrame().get(STATE) == JUMP.state && inAir)
+            || currentDataFrame().get(STATE) == GUARD.state;
     }
 
     public boolean isJumpable() {
@@ -273,11 +275,17 @@ public class GameCharacter extends DataGameObj {
     }
 
     public boolean isAttackable() {
-        return currentDataFrame().getState() == STAND.state
-            || currentDataFrame().getState() == WALK.state
-            || currentDataFrame().getState() == RUN.state
-            || currentDataFrame().getState() == JUMP.state
-            || currentDataFrame().getState() == DASH_FRONT.state;
+        return currentDataFrame().get(STATE) == STAND.state
+            || currentDataFrame().get(STATE) == WALK.state
+            || currentDataFrame().get(STATE) == RUN.state
+            || currentDataFrame().get(STATE) == JUMP.state
+            || currentDataFrame().get(STATE) == GUARD.state
+            || currentDataFrame().get(STATE) == DASH_FRONT.state;
+    }
+
+    public boolean isDefendable() {
+        return currentDataFrame().get(STATE) == STAND.state
+            || currentDataFrame().get(STATE) == WALK.state;
     }
 
     private void setNewFrame(int index) {
@@ -293,7 +301,7 @@ public class GameCharacter extends DataGameObj {
     }
 
     private void preJump() {
-        if(currentDataFrame().getState() == STAND.state || currentDataFrame().getState() == WALK.state  && !inAir) {
+        if(currentDataFrame().get(STATE) == STAND.state || currentDataFrame().get(STATE) == WALK.state  && !inAir) {
             setNewFrame(PRE_JUMP.frame);
         }
     }
@@ -321,9 +329,9 @@ public class GameCharacter extends DataGameObj {
 
     public float diferenceStageBoundZ2(float z) { return getZIndex() + z - ((DefaultStage) getStage()).boundZ2; }
 
-    public float getObjectiveX() { return getRelativeBodyX() + getWidth() * getModBySide() - currentDataFrame().getCenterX() * getModBySide(); }
+    public float getObjectiveX() { return getRelativeBodyX() + getWidth() * getModBySide() - currentDataFrame().get(CENTER_X) * getModBySide(); }
 
-    public float getObjectiveY() { return getY() + currentDataFrame().getCenterY(); }
+    public float getObjectiveY() { return getY() + currentDataFrame().get(CENTER_Y); }
 
     public float getObjectiveZ() { return posZ + getHeight(); }
 
@@ -334,24 +342,45 @@ public class GameCharacter extends DataGameObj {
     public void movement() {
         float movZ = 0f, movX = 0f;
 
-        //Check movement keys
+        //Check Movement Keys
         if (keyUp) movZ = -1f;
         else if (keyDown) movZ = 1f;
         if (keyRight) movX = 2f;
         else if (keyLeft) movX = -2f;
-        timerA = timerA <= 0 ? 0 : timerA--;
-        timerJ = timerJ <= 0 ? 0 : timerJ--;
 
-        //Check key trigger
-        final int skillFrame = checkSkillTrigger(movX, movZ);
-        if(skillFrame != 0) setNewFrame(skillFrame);
-        if(hitA && holdA == 0 && isAttackable()) basicAttack();
-        if(hitJ && holdJ == 0 && isJumpable()) preJump();
-        if(hitD && isAttackable()) setNewFrame(GUARD.frame);
+        //Check action keys
+        if(hitA) {
+            if(holdA == 0) timerA = 3;
+            holdA += 1;
+        } else {
+            holdA = 0;
+            timerA = timerA <= 0 ? 0 : timerA-1;
+        } if(hitJ) {
+            if(holdJ == 0) timerJ = 3;
+            holdJ += 1;
+        } else {
+            holdJ = 0;
+            timerJ = timerJ <= 0 ? 0 : timerJ-1;
+        } if(hitD) {
+            timerD = 3;
+        } else {
+            timerD = timerD <= 0 ? 0 : timerD-1;
+        }
 
         //Flip X
         if (movX > 0 && isFlippable()) right = true;
         else if (movX < 0 && isFlippable()) right = false;
+
+        //Check Command Keys
+        checkSpecialCommands(movX, movZ);
+        final int triggerFrame = doSpecialCommands();
+        if(triggerFrame != 0)
+            setNewFrame(triggerFrame);
+        else {
+            if (hitA && holdA < 3 && isAttackable()) basicAttack();
+            else if (hitJ && holdJ < 3 && isJumpable()) preJump();
+            else if (hitD && isDefendable()) setNewFrame(GUARD.frame);
+        }
 
         //Basic movement
         if(isMovable()) {
@@ -363,7 +392,7 @@ public class GameCharacter extends DataGameObj {
                     movZ = movZ * 0.75f;
                 }
                 //Start walking frame
-                if (currentDataFrame().getState() == STAND.state) {
+                if (currentDataFrame().get(STATE) == STAND.state) {
                     setNewFrame(WALK.frame, 2.0f * 0.1f);
                 }
             }
@@ -371,7 +400,7 @@ public class GameCharacter extends DataGameObj {
             else {
                 walkCount = runCount = 0;
                 walkReverse = runReverse = false;
-                if (currentDataFrame().getState() == WALK.state)
+                if (currentDataFrame().get(STATE) == WALK.state)
                     setNewFrame(STAND.frame);
             }
         } else {
@@ -381,41 +410,42 @@ public class GameCharacter extends DataGameObj {
             walkReverse = runReverse = false;
         }
 
-        //Check action keys
-        if(hitA) {
-            if(holdA == 0) timerA = 5;
-            holdA += 1;
-        }  else holdA = 0;
-        if(hitJ) {
-            if(holdJ == 0) timerJ = 5;
-            holdJ += 1;
-        } else holdJ = 0;
-
         //Update positions
         setLocation(movX, movZ);
     }
 
-    private int checkSkillTrigger(float movX, float movZ) {
-        if(!hitD) return 0;
-        final Map<CharacterSkillCommand, Integer> mapSkillCommands = currentDataFrame().getSkillCommands();
-        for(CharacterSkillCommand cmd : mapSkillCommands.keySet()) {
-            switch(cmd){
-                case HIT_UA: if(timerA > 0 && movZ < 0)   return mapSkillCommands.get(cmd);
-                case HIT_FA: if(timerA > 0 && movX != 0)  return mapSkillCommands.get(cmd);
-                case HIT_DA: if(timerA > 0 && movZ > 0)   return mapSkillCommands.get(cmd);
-                case HIT_UJ: if(timerJ > 0 && movZ < 0)   return mapSkillCommands.get(cmd);
-                case HIT_FJ: if(timerJ > 0 && movX != 0)  return mapSkillCommands.get(cmd);
-                case HIT_DJ: if(timerJ > 0 && movZ > 0)   return mapSkillCommands.get(cmd);
-                case HIT_AJ: if(timerA > 0 && timerJ > 0) return mapSkillCommands.get(cmd);
-            }
+    private void checkSpecialCommands(float movX, float movZ) {
+        hitDuA = (timerA > 0 && movZ < 0 && timerD > 0);
+        hitDfA = (timerA > 0 && movX != 0 && timerD > 0);
+        hitDdA = (timerA > 0 && movZ > 0 && timerD > 0);
+        hitDuJ = (timerJ > 0 && movZ < 0 && timerD > 0);
+        hitDfJ = (timerJ > 0 && movX != 0 && timerD > 0);
+        hitDdJ = (timerJ > 0 && movZ > 0 && timerD > 0);
+    }
+
+    private int doSpecialCommands() {
+        final Map<CharacterCommandKeyword, Integer> mapSkillCommands = currentDataFrame().getCommands();
+        for(CharacterCommandKeyword cmd : mapSkillCommands.keySet()) {
+            if(mapSkillCommands.get(cmd) == 0) continue;
+            if(cmd == HIT_UA && hitDuA) return mapSkillCommands.get(cmd);
+            else if(cmd == HIT_FA && hitDfA) return mapSkillCommands.get(cmd);
+            else if(cmd == HIT_DA && hitDdA) return mapSkillCommands.get(cmd);
+            else if(cmd == HIT_UJ && hitDuJ) return mapSkillCommands.get(cmd);
+            else if(cmd == HIT_FJ && hitDfJ) return mapSkillCommands.get(cmd);
+            else if(cmd == HIT_DJ && hitDdJ) return mapSkillCommands.get(cmd);
+            else if(cmd == HIT_ALL && hitDAJ) return mapSkillCommands.get(cmd);
+            else if(cmd == HIT_AJ && hitAJ) return mapSkillCommands.get(cmd);
+            else if(cmd == HIT_A && timerA > 0) return mapSkillCommands.get(cmd);
+            else if(cmd == HIT_J && timerJ > 0) return mapSkillCommands.get(cmd);
+            else if(cmd == HIT_D && timerD > 0) return mapSkillCommands.get(cmd);
         }
         return 0;
     }
 
     private void basicAttack() {
-        val currentState = currentDataFrame().getState();
+        val currentState = currentDataFrame().get(STATE);
         //Normal attack
-        if(currentState == STAND.state || currentState == WALK.state)
+        if(currentState == STAND.state || currentState == WALK.state || currentState == GUARD.state)
             setNewFrame(!punch1 ? ATTACK_1.frame : ATTACK_2.frame);
         //Running attack
         else if(currentState == RUN.state)
@@ -465,19 +495,11 @@ public class GameCharacter extends DataGameObj {
             inAir = true;
         }
         posY += accY;
-//        inAir = posY <= -1;
-//        setAccY(!inAir ? 0f : accY + Math.abs(accY * 0.1f) + 0.1f);
-//        if(inAir)
-//            setFrameIndex(JUMP.frame);
-//        else {
-//            if(frameIndex == JUMP.frame) setFrameIndex(CROUCH.frame);
-//            posY = 0;
-//        }
     }
 
     private void doAcceleration(float movZ) {
-        final int relativeDvx = currentDataFrame().getDvx() * getModBySide();
-        final boolean isDvz = currentDataFrame().getDvz() != 0 && movZ != 0;
+        final int relativeDvx = currentDataFrame().get(DVX) * getModBySide();
+        final boolean isDvz = currentDataFrame().get(DVZ) != 0 && movZ != 0;
 
         //Apply acceleration when needed
         if(relativeDvx != 0) setAccX(accX + relativeDvx * getDvxMod());
@@ -485,8 +507,8 @@ public class GameCharacter extends DataGameObj {
         if(isDvz) setAccZ(accZ + getDvzMod() * (movZ < 0 ? -1 : 1));
 
         //Calculate acceleration X/Z axis when in the ground (friction)
-        if(!inAir) setAccX(accX - accX * 0.1f);
-        if(!inAir) setAccZ(accZ - accZ * 0.1f);
+        if(!inAir && accX != 0) setAccX(accX - accX * 0.1f);
+        if(!inAir && accZ != 0) setAccZ(accZ - accZ * 0.1f);
 
         //Check minimum valid acceleration value or become 0
         if(accX > -0.05f && accX < 0.05f) setAccX(0f);
@@ -494,15 +516,15 @@ public class GameCharacter extends DataGameObj {
     }
 
     private float getDvxMod() {
-        return currentDataFrame().getDvx() * 0.01f + 0.03f;
+        return currentDataFrame().get(DVX) * 0.01f + 0.03f;
     }
 
     private float getDvyMod() {
-        return currentDataFrame().getDvy() * 0.275f;
+        return currentDataFrame().get(DVY) * 0.275f;
     }
 
     private float getDvzMod() {
-        return currentDataFrame().getDvz() * 0.01f + 0.03f;
+        return currentDataFrame().get(DVZ) * 0.01f + 0.03f;
     }
 
     private void setAccX(float newAccX) {
@@ -532,7 +554,7 @@ public class GameCharacter extends DataGameObj {
     }
 
     public float getDisplayX() {
-        return getX() + (getWidth()/2) * getModBySide() - currentDataFrame().getCenterX() * getModBySide();
+        return getX() + (getWidth()/2) * getModBySide() - currentDataFrame().get(CENTER_X) * getModBySide();
     }
 
     private int getModBySide() {
@@ -581,7 +603,7 @@ public class GameCharacter extends DataGameObj {
         drawDebugInfo(batch);
         batch.end();
 
-        //(int) getX() - currentDataFrame().getCenterX() * getModBySide()
+        //(int) getX() - currentDataFrame().get(CENTER_X) * getModBySide()
         //getRelativeSideX()
 
         //Drawing center point
@@ -610,6 +632,9 @@ public class GameCharacter extends DataGameObj {
         font.draw(batch, "AccY: " + accY, 150, 20);
         font.draw(batch, "AccZ: " + accZ, 300, 20);
         font.draw(batch, "InAir: " + (inAir ? "true" : "false"), 450, 20);
+        font.draw(batch, "AtkTimer: " + timerA, 600, 20);
+        font.draw(batch, "JmpTimer: " + timerJ, 750, 20);
+        font.draw(batch, "DefTimer: " + timerD, 900, 20);
 
         //Keys
         if(keyLeft) font.draw(batch, "Left", 0, Gdx.graphics.getHeight()-40);
@@ -619,6 +644,12 @@ public class GameCharacter extends DataGameObj {
         if(hitA) font.draw(batch, "Attack", 300, Gdx.graphics.getHeight()-40);
         if(hitJ) font.draw(batch, "Jump", 375, Gdx.graphics.getHeight()-40);
         if(hitD) font.draw(batch, "Defense", 425, Gdx.graphics.getHeight()-40);
+        if(hitDuA) font.draw(batch, "D.U.A", 500, Gdx.graphics.getHeight()-40);
+        if(hitDfA) font.draw(batch, "D.F.A", 575, Gdx.graphics.getHeight()-40);
+        if(hitDdA) font.draw(batch, "D.D.A", 625, Gdx.graphics.getHeight()-40);
+        if(hitDuJ) font.draw(batch, "D.U.J", 700, Gdx.graphics.getHeight()-40);
+        if(hitDfJ) font.draw(batch, "D.F.J", 775, Gdx.graphics.getHeight()-40);
+        if(hitDdJ) font.draw(batch, "D.D.J", 825, Gdx.graphics.getHeight()-40);
 
         //Stage
         font.draw(batch, "StageX: " + ((DefaultStage) getStage()).boundX, 0, Gdx.graphics.getHeight()-20);

@@ -5,47 +5,21 @@ import lombok.experimental.FieldDefaults;
 
 import java.util.*;
 
-import static br.com.jcaguiar.lfe.CharacterSkillCommand.*;
-
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 @ToString
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class DataFrame {
 
-    //ANIMATION
-//    int frame;
-    int pic;
-    int state;
-    int wait;
-//    int timerWait;
-    int dvx;
-    int dvy;
-    int dvz;
-    int centerX;
-    int centerY;
+    //FRAME KEYS
+    final Map<CharacterFrameKeyword, Integer> frameKeywords = new HashMap<>();
     String sound;
-    int mpCost;
-//    int nextId;
-    int nextFrame;
-//    int nextMpCost;
+    //TODO: implement nextId;
 
-    //COMMANDS
-    int hit_a;
-    int hit_d;
-    int hit_j;
-    int hit_Fa;
-    int hit_Ua;
-    int hit_Da;
-    int hit_Fj;
-    int hit_Uj;
-    int hit_Dj;
-    int hit_ja;
+    //COMMANDS KEYS
+    final Map<CharacterCommandKeyword, Integer> commandKeywords = new HashMap<>();
 
-    //3D VOLUME
+    //BODIES, INTERACTIONS AND COORDINATES
     public static final int MAX_ELEMENTS_ARRAY = 4;
     final List<ObjectBodyBox> bodies = new ArrayList<>();
     final List<ObjectInteractionBox> interactions = new ArrayList<>();
@@ -54,6 +28,16 @@ public class DataFrame {
     ObjectItemPoint item = new ObjectItemPoint();
     ObjectStickPoint blood = new ObjectStickPoint();
     //ObjectStickPoint[] sticks = new ObjectStickPoint[2]; TODO: implement
+
+    public DataFrame() {
+        //Set default 0 value for all frame keywords
+        Arrays.stream(CharacterFrameKeyword.values())
+            .forEach(fk -> frameKeywords.put(fk, 0));
+
+        //Set default 0 value for all command keywords
+        Arrays.stream(CharacterCommandKeyword.values())
+            .forEach(ck -> commandKeywords.put(ck, 0));
+    }
 
     //GET TOTAL BODY VOLUME
     public ObjectBodyBox overallBody() {
@@ -81,22 +65,14 @@ public class DataFrame {
         return overall;
     }
 
-    public Map<CharacterSkillCommand, Integer> getSkillCommands() {
-        final Map<CharacterSkillCommand, Integer> mapSkillCommands = new HashMap<>(7);
-        if(hit_Ua != 0) mapSkillCommands.put(HIT_UA, hit_Ua);
-        if(hit_Fa != 0) mapSkillCommands.put(HIT_FA, hit_Fa);
-        if(hit_Da != 0) mapSkillCommands.put(HIT_DA, hit_Da);
-        if(hit_Uj != 0) mapSkillCommands.put(HIT_UJ, hit_Uj);
-        if(hit_Fj != 0) mapSkillCommands.put(HIT_FJ, hit_Fj);
-        if(hit_Dj != 0) mapSkillCommands.put(HIT_DJ, hit_Dj);
-        if(hit_ja != 0) mapSkillCommands.put(HIT_AJ, hit_ja);
-        return mapSkillCommands;
+    public Map<CharacterCommandKeyword, Integer> getCommands() {
+        return commandKeywords;
     }
 
     public void setAttribute(Map<String, Integer> keyValues, DataFrameScope frameKey) {
         if(frameKey == null) return;
         switch(frameKey) {
-            case PIC: setPicValues(keyValues);
+            case PIC: setFrameKeywords(keyValues);
                 break;
             case BPOINT: setBpointValues(keyValues);
                 break;
@@ -129,31 +105,24 @@ public class DataFrame {
         bodies.add(bdy);
     }
 
-    private void setPicValues(Map<String, Integer> keyValues) {
-//        frame = keyValues.get("frame");
-        if(pic == 0)        pic =       Optional.ofNullable(keyValues.get("pic")).orElse(0);
-        if(state == 0)      state =     Optional.ofNullable(keyValues.get("state")).orElse(0);
-        if(wait == 0)       wait =      Optional.ofNullable(keyValues.get("wait")).orElse(0);
-        if(nextFrame == 0)  nextFrame = Optional.ofNullable(keyValues.get("next")).orElse(0);
-        if(dvx == 0)        dvx =       Optional.ofNullable(keyValues.get("dvx")).orElse(0);
-        if(dvy == 0)        dvy =       Optional.ofNullable(keyValues.get("dvy")).orElse(0);
-        if(dvz == 0)        dvz =       Optional.ofNullable(keyValues.get("dvz")).orElse(0);
-        if(centerX == 0)    centerX =   Optional.ofNullable(keyValues.get("centerx")).orElse(0);
-        if(centerY == 0)    centerY =   Optional.ofNullable(keyValues.get("centery")).orElse(0);
-        if(hit_a == 0)      hit_a =     Optional.ofNullable(keyValues.get("hit_a")).orElse(0);
-        if(hit_d == 0)      hit_d =     Optional.ofNullable(keyValues.get("hit_d")).orElse(0);
-        if(hit_j == 0)      hit_j =     Optional.ofNullable(keyValues.get("hit_j")).orElse(0);
-        if(hit_j == 0)      hit_j =     Optional.ofNullable(keyValues.get("hit_j")).orElse(0);
-        if(hit_Fa == 0)     hit_Fa =    Optional.ofNullable(keyValues.get("hit_Fa")).orElse(0);
-        if(hit_Ua == 0)     hit_Ua =    Optional.ofNullable(keyValues.get("hit_Ua")).orElse(0);
-        if(hit_Da == 0)     hit_Da =    Optional.ofNullable(keyValues.get("hit_Da")).orElse(0);
-        if(hit_Fj == 0)     hit_Fj =    Optional.ofNullable(keyValues.get("hit_Fj")).orElse(0);
-        if(hit_Uj == 0)     hit_Uj =    Optional.ofNullable(keyValues.get("hit_Uj")).orElse(0);
-        if(hit_Dj == 0)     hit_Dj =    Optional.ofNullable(keyValues.get("hit_Dj")).orElse(0);
-        if(hit_ja == 0)     hit_ja =    Optional.ofNullable(keyValues.get("hit_ja")).orElse(0);
-        if(mpCost == 0)     mpCost =    Optional.ofNullable(keyValues.get("mp")).orElse(0);
-        //new attributes
+    private void setFrameKeywords(Map<String, Integer> keyValues) {
+        //Set frame/command keywords value from keyMap parameter
+        keyValues.keySet().forEach(key -> {
+            CharacterFrameKeyword
+                .validKeyword(key)
+                .ifPresent(fk -> frameKeywords.put(fk, keyValues.get(key)));
+            CharacterCommandKeyword
+                .validKeyword(key)
+                .ifPresent(ck -> commandKeywords.put(ck, keyValues.get(key)));
+        });
+    }
 
+    public int get(CharacterFrameKeyword keyword) {
+        return frameKeywords.get(keyword);
+    }
+
+    public int get(CharacterCommandKeyword keyword) {
+        return commandKeywords.get(keyword);
     }
 
     private void setBpointValues(Map<String, Integer> keyValues) {
