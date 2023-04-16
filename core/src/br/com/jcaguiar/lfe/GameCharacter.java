@@ -74,6 +74,7 @@ public class GameCharacter extends DataGameObj {
     public static final float MAX_ACC_X = 30f;
     public static final float  MAX_ACC_Y = 50f;
     public static final float  MAX_ACC_Z = 30f;
+    public static final float  MIN_ACC = 0.05f;
 
     //INPUTS
     boolean keyUp, keyDown, keyLeft, keyRight;
@@ -224,16 +225,19 @@ public class GameCharacter extends DataGameObj {
                 setAccZ(movZ);
             }
             //Jump State
-            else if(currentState == JUMP.state && inAir)
+            else if(currentState == JUMP.state && inAir) {
                 setNewFrame(JUMP.frame);
+            }
             //Land Frame
-            else if(frameIndex == CROUCH.frame)
-                if(accX > 1 || accX < -1 || accZ > 1 || accZ < -1) setNewFrame(CROUCH.frame);
-                else setNewFrame(currentDataFrame().get(NEXT_FRAME));
+            else if(frameIndex == CROUCH.frame) {
+                if(!hasEffectiveAccX() && !hasEffectiveAccZ()) {
+                    setNewFrame(currentDataFrame().get(NEXT_FRAME));
+                }
+            }
             //Defend/Guard State
-            else if(frameIndex == GUARD.frame)
-                if(hitD) setNewFrame(GUARD.frame);
-                else setNewFrame(currentDataFrame().get(NEXT_FRAME));
+            else if(frameIndex == GUARD.frame) {
+                if(!hitD) setNewFrame(currentDataFrame().get(NEXT_FRAME));
+            }
             //Any Other State
             else setNewFrame(currentDataFrame().get(NEXT_FRAME));
         }
@@ -292,12 +296,24 @@ public class GameCharacter extends DataGameObj {
         frameIndex = index;
         checkValidFrame();
         setFrameTimer();
+        setNewFrameAcceleration();
     }
 
     private void setNewFrame(int index, float timer) {
         frameIndex = index;
         checkValidFrame();
         frameTimer = timer;
+        setNewFrameAcceleration();
+    }
+
+    private void setNewFrameAcceleration() {
+        final int relativeDvx = currentDataFrame().get(DVX) * getModBySide();
+        final boolean isDvz = currentDataFrame().get(DVZ) != 0 && (keyUp || keyDown);
+
+        //Apply acceleration when needed
+        if(relativeDvx != 0) setAccX(accX + relativeDvx * getDvxMod());
+        setAccY(accY + getDvyMod());
+        if(isDvz) setAccZ(accZ + getDvzMod() * (keyUp? -1 : 1));
     }
 
     private void preJump() {
@@ -462,7 +478,14 @@ public class GameCharacter extends DataGameObj {
     public void setLocation(float movX, float movZ) {
         //Apply gravity and set X/Y/Z acceleration values
         doGravity();
-        doAcceleration(movZ);
+
+        //Calculate acceleration X/Z axis when in the ground (friction)
+        if(!inAir && accX != 0) setAccX(accX - accX * 0.1f);
+        if(!inAir && accZ != 0) setAccZ(accZ - accZ * 0.1f);
+
+        //Check minimum valid acceleration value or become 0
+        if(!hasAccX()) setAccX(0f);
+        if(!hasAccZ()) setAccZ(0f);
 
         //Apply X/Z acceleration to movement
         movX = movX + accX;
@@ -497,34 +520,22 @@ public class GameCharacter extends DataGameObj {
         posY += accY;
     }
 
-    private void doAcceleration(float movZ) {
-        final int relativeDvx = currentDataFrame().get(DVX) * getModBySide();
-        final boolean isDvz = currentDataFrame().get(DVZ) != 0 && movZ != 0;
+    private boolean hasAccX() { return accX < -MIN_ACC || accX > MIN_ACC; }
 
-        //Apply acceleration when needed
-        if(relativeDvx != 0) setAccX(accX + relativeDvx * getDvxMod());
-        setAccY(accY + getDvyMod());
-        if(isDvz) setAccZ(accZ + getDvzMod() * (movZ < 0 ? -1 : 1));
+    private boolean hasAccZ() { return accZ < -MIN_ACC || accZ > MIN_ACC; }
 
-        //Calculate acceleration X/Z axis when in the ground (friction)
-        if(!inAir && accX != 0) setAccX(accX - accX * 0.1f);
-        if(!inAir && accZ != 0) setAccZ(accZ - accZ * 0.1f);
+    private boolean hasEffectiveAccX() { return accX < -MIN_ACC*4 || accX > MIN_ACC*4; }
 
-        //Check minimum valid acceleration value or become 0
-        if(accX > -0.05f && accX < 0.05f) setAccX(0f);
-        if(accZ > -0.05f && accZ < 0.05f) setAccZ(0f);
-    }
+    private boolean hasEffectiveAccZ() { return accZ < -MIN_ACC*4 || accZ > MIN_ACC*4; }
 
-    private float getDvxMod() {
-        return currentDataFrame().get(DVX) * 0.01f + 0.03f;
-    }
+    private float getDvxMod() { return 0.2f; }
 
     private float getDvyMod() {
-        return currentDataFrame().get(DVY) * 0.275f;
+        return currentDataFrame().get(DVY) * 1.6f;
     }
 
     private float getDvzMod() {
-        return currentDataFrame().get(DVZ) * 0.01f + 0.03f;
+        return 0.02f;
     }
 
     private void setAccX(float newAccX) {

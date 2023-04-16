@@ -10,7 +10,7 @@ public enum CharacterCommandKeyword {
     HIT_UA("hit_Ua"),
     HIT_FA("hit_Fa"),
     HIT_DA("hit_Da"),
-    HIT_UJ("hit_U"),
+    HIT_UJ("hit_Uj"),
     HIT_FJ("hit_Fj"),
     HIT_DJ("hit_Dj"),
     HIT_AJ("hit_ja"),
