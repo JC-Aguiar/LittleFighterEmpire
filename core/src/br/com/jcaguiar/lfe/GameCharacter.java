@@ -57,7 +57,7 @@ public class GameCharacter extends DataGameObj {
     boolean isLowHp, isLowMp, isSafe = false;
 
     //ATTRIBUTES
-    int attack, defense, critic, fatal, dexterity, movement, power, will;
+    int strength, resistance, lethality, agility, power, will;
 
     //PHYSICS
     //int size TODO: implement
@@ -72,15 +72,15 @@ public class GameCharacter extends DataGameObj {
     int weaponId, grabId = -1;
     int hitLag;
     public static final float MAX_ACC_X = 30f;
-    public static final float  MAX_ACC_Y = 50f;
-    public static final float  MAX_ACC_Z = 30f;
-    public static final float  MIN_ACC = 0.05f;
+    public static final float MAX_ACC_Y = 50f;
+    public static final float MAX_ACC_Z = 30f;
+    public static final float MIN_ACC = 0.05f;
 
     //INPUTS
     boolean keyUp, keyDown, keyLeft, keyRight;
     boolean hitRun;
     boolean hitA, hitJ, hitD, hitAJ, hitDfA, hitDuA, hitDdA, hitDfJ, hitDuJ, hitDdJ, hitDAJ;
-    int holdA, holdJ, timerA, timerJ, timerD;
+    int holdA, holdJ, timerLeft, timerRight, timerA, timerJ, timerD;
 
     //SCORE
     int totalDamage, totalInjury, totalMpCost, totalKills, totalDeaths, totalItens;
@@ -143,8 +143,8 @@ public class GameCharacter extends DataGameObj {
 
     private boolean keyRelease(int keycode) {
         switch(keycode) {
-            case Input.Keys.RIGHT:  keyRight = false; return true;
-            case Input.Keys.LEFT:   keyLeft = false; return true;
+            case Input.Keys.RIGHT:  if(isRunnable()) timerRight = 9; keyRight = false; return true;
+            case Input.Keys.LEFT:   if(isRunnable()) timerLeft = 9; keyLeft = false; return true;
             case Input.Keys.UP:     keyUp = false; return true;
             case Input.Keys.DOWN:   keyDown = false; return true;
             case Input.Keys.Q:      hitA = false; return true;
@@ -197,10 +197,10 @@ public class GameCharacter extends DataGameObj {
             }
             //Running State
             else if(currentState == RUN.state && !inAir) {
-                if(runCount >= runningFrameRate) runReverse = true;
+                if(runCount >= runningFrameRate-1) runReverse = true;
                 else if(runCount <= 0) runReverse = false;
                 runCount += runReverse ? -1 : 1;
-                setNewFrame(runReverse ? frameIndex-1 : frameIndex+1 , 1.25f * 0.1f);
+                setNewFrame(RUN.frame + runCount, 1.25f * 0.1f);
             }
             //Pre-Jump Frame
             else if(currentDataFrame().get(NEXT_FRAME) == JUMP.frame  && !inAir) {
@@ -265,6 +265,11 @@ public class GameCharacter extends DataGameObj {
         return currentDataFrame().get(STATE) == STAND.state
             || currentDataFrame().get(STATE) == WALK.state
             || currentDataFrame().get(STATE) == RUN.state;
+    }
+
+    public boolean isRunnable() {
+        return currentDataFrame().get(STATE) == STAND.state
+            || currentDataFrame().get(STATE) == WALK.state;
     }
 
     public boolean isFlippable() {
@@ -359,10 +364,16 @@ public class GameCharacter extends DataGameObj {
         float movZ = 0f, movX = 0f;
 
         //Check Movement Keys
-        if (keyUp) movZ = -1f;
-        else if (keyDown) movZ = 1f;
-        if (keyRight) movX = 2f;
-        else if (keyLeft) movX = -2f;
+        if(keyUp) movZ = -1f;
+        else if(keyDown) movZ = 1f;
+        if(keyRight) movX = 2f;
+        else if(keyLeft) movX = -2f;
+        if(!keyRight) timerRight = timerRight <= 0 ? 0 : timerRight-1;
+        if(!keyLeft) timerLeft = timerLeft <= 0 ? 0 : timerLeft-1;
+        if(currentDataFrame().get(STATE) == RUN.state) {
+            movX *= 2.5;
+            movZ /= 2;
+        }
 
         //Check action keys
         if(hitA) {
@@ -401,25 +412,42 @@ public class GameCharacter extends DataGameObj {
         //Basic movement
         if(isMovable()) {
             //Basic movement in X axis
-            if (movX != 0 || movZ != 0) {
+            if(movX != 0 || movZ != 0) {
                 //Dual movement
-                if (movX != 0 && movZ != 0) {
+                if(movX != 0 && movZ != 0) {
                     movX = movX * 0.75f;
                     movZ = movZ * 0.75f;
                 }
                 //Start walking frame
-                if (currentDataFrame().get(STATE) == STAND.state) {
-                    setNewFrame(WALK.frame, 2.0f * 0.1f);
+                if(currentDataFrame().get(STATE) == STAND.state) {
+                    //Check tun trigger
+                    if(timerRight > 0 && movX > 0) {
+                        timerRight = 0;
+                        setNewFrame(RUN.frame, 1.5f * 0.1f);
+                    }
+                    else if(timerLeft > 0 && movX < 0) {
+                        timerLeft = 0;
+                        setNewFrame(RUN.frame, 1.5f * 0.1f);
+                    }
+                    else setNewFrame(WALK.frame, 2.0f * 0.1f);
+                }
+                else if(currentDataFrame().get(STATE) == RUN.state) {
+                    if(movX <= 0 && right) setNewFrame(STOP_RUN.frame);
+                    if(movX >= 0 && !right) setNewFrame(STOP_RUN.frame);
                 }
             }
             //No keys pressed
             else {
                 walkCount = runCount = 0;
                 walkReverse = runReverse = false;
-                if (currentDataFrame().get(STATE) == WALK.state)
+                if(currentDataFrame().get(STATE) == RUN.state)
+                    setNewFrame(STOP_RUN.frame);
+                else if(currentDataFrame().get(STATE) == WALK.state)
                     setNewFrame(STAND.frame);
             }
-        } else {
+        }
+        //Not in STAND, WALK, RUN state
+        else {
             movZ = 0f;
             movX = 0f;
             walkCount = runCount = 0;
@@ -643,9 +671,11 @@ public class GameCharacter extends DataGameObj {
         font.draw(batch, "AccY: " + accY, 150, 20);
         font.draw(batch, "AccZ: " + accZ, 300, 20);
         font.draw(batch, "InAir: " + (inAir ? "true" : "false"), 450, 20);
-        font.draw(batch, "AtkTimer: " + timerA, 600, 20);
-        font.draw(batch, "JmpTimer: " + timerJ, 750, 20);
-        font.draw(batch, "DefTimer: " + timerD, 900, 20);
+        font.draw(batch, "RightTimer: " + timerRight, 0, 40);
+        font.draw(batch, "LeftTimer: " + timerLeft, 125, 40);
+        font.draw(batch, "AtkTimer: " + timerA, 250, 40);
+        font.draw(batch, "JmpTimer: " + timerJ, 375, 40);
+        font.draw(batch, "DefTimer: " + timerD, 500, 40);
 
         //Keys
         if(keyLeft) font.draw(batch, "Left", 0, Gdx.graphics.getHeight()-40);
