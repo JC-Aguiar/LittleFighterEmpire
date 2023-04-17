@@ -65,8 +65,7 @@ public class GameCharacter extends DataGameObj {
     boolean inAir = false;
     float posX, posY, posZ;
     float accX = 0, accY = 0, accZ = 0;
-    float speedWalkX, speedWalkZ;
-    float speedRunX, speedRunZ;
+    float runMomentum = 0;
     float jumpX, jumpY, jumpZ;
     float startX, startZ;
     int weaponId, grabId = -1;
@@ -78,9 +77,10 @@ public class GameCharacter extends DataGameObj {
 
     //INPUTS
     boolean keyUp, keyDown, keyLeft, keyRight;
-    boolean hitRun;
-    boolean hitA, hitJ, hitD, hitAJ, hitDfA, hitDuA, hitDdA, hitDfJ, hitDuJ, hitDdJ, hitDAJ;
-    int holdA, holdJ, timerLeft, timerRight, timerA, timerJ, timerD;
+    boolean hitRun, hitA, hitJ, hitD, hitAJ, hitDfA, hitDuA, hitDdA, hitDfJ, hitDuJ, hitDdJ, hitDAJ;
+    int holdLeft, holdRight, holdA, holdJ;
+    int timerLeft, timerRight, timerA, timerJ, timerD;
+    int lastInput = -1;
 
     //SCORE
     int totalDamage, totalInjury, totalMpCost, totalKills, totalDeaths, totalItens;
@@ -115,6 +115,7 @@ public class GameCharacter extends DataGameObj {
             }
         });
 
+
         // Carregando fonte TrueTypeFont
         val generator = new FreeTypeFontGenerator(Gdx.files.internal("Carlito-Bold.ttf"));
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
@@ -143,13 +144,13 @@ public class GameCharacter extends DataGameObj {
 
     private boolean keyRelease(int keycode) {
         switch(keycode) {
-            case Input.Keys.RIGHT:  if(isRunnable()) timerRight = 9; keyRight = false; return true;
-            case Input.Keys.LEFT:   if(isRunnable()) timerLeft = 9; keyLeft = false; return true;
-            case Input.Keys.UP:     keyUp = false; return true;
-            case Input.Keys.DOWN:   keyDown = false; return true;
-            case Input.Keys.Q:      hitA = false; return true;
-            case Input.Keys.W:      hitJ = false; return true;
-            case Input.Keys.E:      hitD = false; return true;
+            case Input.Keys.RIGHT:  lastInput = keycode; keyRight = false; return true;
+            case Input.Keys.LEFT:   lastInput = keycode; keyLeft = false; return true;
+            case Input.Keys.UP:     lastInput = keycode; keyUp = false; return true;
+            case Input.Keys.DOWN:   lastInput = keycode; keyDown = false; return true;
+            case Input.Keys.Q:      lastInput = keycode; hitA = false; return true;
+            case Input.Keys.W:      lastInput = keycode; hitJ = false; return true;
+            case Input.Keys.E:      lastInput = keycode; hitD = false; return true;
             default:                return false;
         }
     }
@@ -312,13 +313,24 @@ public class GameCharacter extends DataGameObj {
     }
 
     private void setNewFrameAcceleration() {
-        final int relativeDvx = currentDataFrame().get(DVX) * getModBySide();
-        final boolean isDvz = currentDataFrame().get(DVZ) != 0 && (keyUp || keyDown);
+        //Running acceleration
+        if(currentDataFrame().get(STATE) == RUN.state) {
+            setAccX(accX + (4f + (keyUp || keyDown ? runMomentum : runMomentum * 0.75f)) * getModBySide());
+            //TODO: move back to the movement() method
+        }
+        //Other frames acceleration
+        else {
+            final int relativeDvx = currentDataFrame().get(DVX) * getModBySide();
+            final boolean isDvz = currentDataFrame().get(DVZ) != 0 && (keyUp || keyDown);
 
-        //Apply acceleration when needed
-        if(relativeDvx != 0) setAccX(accX + relativeDvx * getDvxMod());
-        setAccY(accY + getDvyMod());
-        if(isDvz) setAccZ(accZ + getDvzMod() * (keyUp? -1 : 1));
+            //When stopping run
+            if(frameIndex == STOP_RUN.frame) setAccX(accX + 1f * getModBySide());
+
+            //Apply acceleration when needed
+            if(relativeDvx != 0) setAccX(accX + relativeDvx * getDvxMod());
+            setAccY(accY + getDvyMod());
+            if(isDvz) setAccZ(accZ + getDvzMod() * (keyUp? -1 : 1));
+        }
     }
 
     private void preJump() {
@@ -364,42 +376,55 @@ public class GameCharacter extends DataGameObj {
         float movZ = 0f, movX = 0f;
 
         //Check Movement Keys
-        if(keyUp) movZ = -1f;
-        else if(keyDown) movZ = 1f;
-        if(keyRight) movX = 2f;
-        else if(keyLeft) movX = -2f;
-        if(!keyRight) timerRight = timerRight <= 0 ? 0 : timerRight-1;
-        if(!keyLeft) timerLeft = timerLeft <= 0 ? 0 : timerLeft-1;
-        if(currentDataFrame().get(STATE) == RUN.state) {
-            movX *= 2.5;
-            movZ /= 2;
+        if(keyUp)
+            movZ = -1f;
+        else if(keyDown)
+            movZ = 1f;
+        if(keyRight) {
+            movX = 2f;
+            hitRun = timerRight > 0 && lastInput == Input.Keys.RIGHT;
+            if(holdRight == 0) timerRight = 12;
+            holdRight += 1;
+            holdLeft = 0;
+        } else if(keyLeft) {
+            movX = -2f;
+            hitRun = timerLeft > 0 && lastInput == Input.Keys.LEFT;
+            if(holdLeft == 0) timerLeft = 12;
+            holdLeft += 1;
+            holdRight = 0;
+        } else {
+            holdLeft = holdRight = 0;
+            hitRun = false;
         }
-
-        //Check action keys
         if(hitA) {
-            if(holdA == 0) timerA = 3;
+            if(holdA == 0) timerA = 8;
             holdA += 1;
         } else {
             holdA = 0;
-            timerA = timerA <= 0 ? 0 : timerA-1;
         } if(hitJ) {
-            if(holdJ == 0) timerJ = 3;
+            if(holdJ == 0) timerJ = 8;
             holdJ += 1;
         } else {
             holdJ = 0;
-            timerJ = timerJ <= 0 ? 0 : timerJ-1;
         } if(hitD) {
-            timerD = 3;
-        } else {
-            timerD = timerD <= 0 ? 0 : timerD-1;
+            timerD = 8;
         }
+        timerRight = timerRight <= 0 ? 0 : timerRight - 1;
+        timerLeft = timerLeft <= 0 ? 0 : timerLeft - 1;
+        timerA = timerA <= 0 ? 0 : timerA-1;
+        timerJ = timerJ <= 0 ? 0 : timerJ-1;
+        timerD = timerD <= 0 ? 0 : timerD-1;
+
+        //Set running modifiers
+        if(currentDataFrame().get(STATE) == RUN.state)
+            runMomentum = runMomentum <= 0 ? 0 : runMomentum-0.1f;
 
         //Flip X
         if (movX > 0 && isFlippable()) right = true;
         else if (movX < 0 && isFlippable()) right = false;
 
         //Check Command Keys
-        checkSpecialCommands(movX, movZ);
+        checkSpecialCommands();
         final int triggerFrame = doSpecialCommands();
         if(triggerFrame != 0)
             setNewFrame(triggerFrame);
@@ -421,12 +446,12 @@ public class GameCharacter extends DataGameObj {
                 //Start walking frame
                 if(currentDataFrame().get(STATE) == STAND.state) {
                     //Check tun trigger
-                    if(timerRight > 0 && movX > 0) {
-                        timerRight = 0;
+                    if(hitRun && movX > 0) {
+                        runMomentum = 4f;
                         setNewFrame(RUN.frame, 1.5f * 0.1f);
                     }
-                    else if(timerLeft > 0 && movX < 0) {
-                        timerLeft = 0;
+                    else if(hitRun && movX < 0) {
+                        runMomentum = 4f;
                         setNewFrame(RUN.frame, 1.5f * 0.1f);
                     }
                     else setNewFrame(WALK.frame, 2.0f * 0.1f);
@@ -458,13 +483,13 @@ public class GameCharacter extends DataGameObj {
         setLocation(movX, movZ);
     }
 
-    private void checkSpecialCommands(float movX, float movZ) {
-        hitDuA = (timerA > 0 && movZ < 0 && timerD > 0);
-        hitDfA = (timerA > 0 && movX != 0 && timerD > 0);
-        hitDdA = (timerA > 0 && movZ > 0 && timerD > 0);
-        hitDuJ = (timerJ > 0 && movZ < 0 && timerD > 0);
-        hitDfJ = (timerJ > 0 && movX != 0 && timerD > 0);
-        hitDdJ = (timerJ > 0 && movZ > 0 && timerD > 0);
+    private void checkSpecialCommands() {
+        hitDuA = (timerA > 0 && keyUp && timerD > 0);
+        hitDfA = (timerA > 0 && (keyLeft || keyRight) && timerD > 0);
+        hitDdA = (timerA > 0 && keyDown && timerD > 0);
+        hitDuJ = (timerJ > 0 && keyUp && timerD > 0);
+        hitDfJ = (timerJ > 0 && (keyLeft || keyRight) && timerD > 0);
+        hitDdJ = (timerJ > 0 && keyDown && timerD > 0);
     }
 
     private int doSpecialCommands() {
@@ -556,7 +581,7 @@ public class GameCharacter extends DataGameObj {
 
     private boolean hasEffectiveAccZ() { return accZ < -MIN_ACC*4 || accZ > MIN_ACC*4; }
 
-    private float getDvxMod() { return 0.2f; }
+    private float getDvxMod() { return currentDataFrame().get(DVX) * 0.05f; }
 
     private float getDvyMod() {
         return currentDataFrame().get(DVY) * 1.6f;
@@ -673,9 +698,11 @@ public class GameCharacter extends DataGameObj {
         font.draw(batch, "InAir: " + (inAir ? "true" : "false"), 450, 20);
         font.draw(batch, "RightTimer: " + timerRight, 0, 40);
         font.draw(batch, "LeftTimer: " + timerLeft, 125, 40);
-        font.draw(batch, "AtkTimer: " + timerA, 250, 40);
-        font.draw(batch, "JmpTimer: " + timerJ, 375, 40);
-        font.draw(batch, "DefTimer: " + timerD, 500, 40);
+        font.draw(batch, "HoldRight: " + holdRight, 250, 40);
+        font.draw(batch, "HoldLeft: " + holdLeft, 375, 40);
+        font.draw(batch, "AtkTimer: " + timerA, 500, 40);
+        font.draw(batch, "JmpTimer: " + timerJ, 625, 40);
+        font.draw(batch, "DefTimer: " + timerD, 750, 40);
 
         //Keys
         if(keyLeft) font.draw(batch, "Left", 0, Gdx.graphics.getHeight()-40);
