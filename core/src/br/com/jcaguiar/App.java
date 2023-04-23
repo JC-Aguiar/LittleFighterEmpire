@@ -29,7 +29,7 @@ public class App extends ApplicationAdapter {
         camera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         camera.setToOrtho(true);
 		camera.update();
-        stage = new DefaultStage(new ScreenViewport(camera), 0f, 500f, 0f, 200f);
+        stage = new DefaultStage(new ScreenViewport(camera), 0f, 1500f, 0f, 200f);
 
 		DataRepositry.loadDatFile(1, "C:\\joao.aguiar\\Workspace\\AGUIAR\\LFE\\LFE GDX\\assets\\Davis.dat");
         GameCharacter davis = new GameCharacter(DataRepositry.GAME_OBJS_MAP.get(1));
