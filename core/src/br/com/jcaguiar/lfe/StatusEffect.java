@@ -7,7 +7,7 @@ public enum StatusEffect {
     FLAME(),
     SLOW(),
     ICE(),
-    CURSED(),
+    CURSE(),
     BLIND(),
     PARALISE(),
     ROOT(),
@@ -18,13 +18,10 @@ public enum StatusEffect {
     INVINCIBLE(),
 
     //Buffs and Nerffs
-    ATTACK(),
-    DEFENSE(),
-    CRITIC(),
-    FATAL(),
+    STRENGTH(),
+    VITALITY(),
     DEXTERITY(),
-    MOVEMENT(),
-    POWER(),
-    WILL();
+    AGILITY(),
+    POWER();
 
 }
