@@ -58,47 +58,34 @@ public class GameCharacter extends DataGameObj {
     boolean isLowHp, isLowMp, isSafe = false;
 
     //ATTRIBUTES
-    int strength, vitality, dexterity, agility, power, will;
-    //Level     = Goes 1~12 and the default level 1 hero has 5 points in all attributes.
-    //            VS-Mode enable to start at level 5.
+    int strength, vitality, dexterity, agility, power; //will;
+    //Level     = Goes 1~7 and the default level 1 hero has 5 points in all attributes.
+    //            VS-Mode enable to start at level 4.
     //Strength  = +5% in all-attacks, throwing weapons, handling heavy-objects. +3% defense.
-    //Vitality  = +10% hp-regeneration. +3% defense, fall-reduction, heal and status-effects (buff|nerf).
-    //Dexterity = +5% critical-attack ratio (ratio = dexterity*1.5/100 ~ dexterity*5/100).
-    //Agility   = +5% basic-attack speed, skill-attack startup and mobility (jump|dash|roll distance, walk|run speed, less roll time).
-    //Power     = +10% in skill-attacks and heal.
-    //Will      = +10% max-mp, communication, AI-chase, magic-control and status-effects (buff|nerf). +3% fall-reduction.
+    //Vitality  = +10% hp-recovery and mp-recovery. +3% defense, fall-reduction, heal and status-effects (buff|nerf).
+    //Dexterity = +4% critical-attack ratio (ratio = dexterity*4 ~ 100).
+    //Agility   = +5% basic-attack speed and mobility (jump|dash|roll distance, walk|run speed, less roll time).
+    //Power     = +10% in skill-attacks, heal and cast distance/speed.
     //
-    //  Lv 1: 3 skills
-    //  Lv 2: +1 ability
-    //  Lv 3: +1 ability
-    //  Lv 4: +1 ability
-    //  Lv 5: +1 upgrade
-    //  Lv 6: +1 upgrade
-    //  Lv 7: all status +2
+    //  Lv 1: basic skill-set       | Davis: spaming balls      | Deep: spin-attack         | Freeze: winter breath
+    //  Lv 2: +1 super-skill        | Davis: flashbang punch    | Deep: blade blast         | Freeze: ice columns
+    //  Lv 3: +1 super-skill        | Davis: dragon speed       | Deep: killer blade        | Freeze: whirlwind
+    //  Lv 4: +1 super-skill        | Davis: dragon punch       | Deep: berserk assault     | Freeze: ice forge
+    //  Lv 5: upgrade 1 super-skill (free-cost)
+    //  Lv 6: upgrade 1 super-skill (free-cost)
+    //  Lv 7: upgrade 1 super-skill (free-cost)
     //
     //  Core-Attributes:
-    //  Each character can select 3 core-attributes: a principal, a secondary and a complementary.
-    //  Principal attribute has +1 for each level. The secondary attribute at levels 2, 4, 6, 8, 10, 12.
-    //  The complementary attribute at levels 3, 6, 9, 12. (? All others attributes at level 4, 8, 12 ?)
+    //  Each character can select 3 core-attributes: 1 principal and 2 secondaries.
+    //  Principal attribute gain +2 for each level, while the secondaries gains +1.
     //
     //  Critical-Attacks:
     //  Converts a percentage of the attack as bonus damage/fall that ignores defense and reduce enemies max hp.
-    //  Melee attacks always hit the max ratio against vulnerable enemies.
-    //  Additional +25% bonus damage for all Weapon-Attacks (shoot/throw a weapon decrease the ratio by they altitude).
+    //  Melee attacks gains +50% ratio against vulnerable enemies.
+    //  Additional +25% damage for all Weapon-Attacks (shoot/throw a weapon decrease the ratio by they altitude).
     //  Area-Attacks apply critical by calculating how centered the enemy is (size * enemy-hit-position).
     //  Non-Area-Attacks apply critical by the ratio itself.
-    //
-    //  Exemple:  Lv10 DEEP (Strength=16, Dexterity=10, Vitality=8)
-    //  IF: Attack=15, Critical-Attack=2~7 (random)
-    //  IF: Attack=100, Critical-Attack=15~50 (random)
-    //  IF: Attack=100 and vulnerable enemy, Critical-Attack=50
-    //  IF: Attack=175, Critical-Attack=26~87 (random)
-    //  IF: Weapon-Attack=15, Critical-Attack=2~9 (random)
-    //  IF: Weapon-Attack=100, Critical-Attack=19~62 (random)
-    //  IF: Weapon-Attack=100 and vulnerable enemy, Critical-Attack=62
-    //  IF: Weapon-Attack=175, Critical-Attack=32~109 (random) (against Deep v10, damage = 71 + 32~109)
 
-    //  IF: Power=10 and Attack=175, Attack=350 (against Deep v10, damage = 185)
 
     //PHYSICS
     //int size TODO: implement
@@ -355,8 +342,7 @@ public class GameCharacter extends DataGameObj {
 
     public boolean isPunchable() {
         return  currentDataFrame().get(STATE) == STAND.state
-            ||  currentDataFrame().get(STATE) == WALK.state
-            ||  currentDataFrame().get(STATE) == GUARD.state;
+            ||  currentDataFrame().get(STATE) == WALK.state;
     }
 
     private void setNewFrame(int index) {
@@ -466,7 +452,7 @@ public class GameCharacter extends DataGameObj {
         } else {
             holdJ = 0;
         } if(hitD) {
-            timerD = 8;
+            timerD = timerD == 0 ? 8 : timerD;
         }
         timerRight = timerRight <= 0 ? 0 : timerRight - 1;
         timerLeft = timerLeft <= 0 ? 0 : timerLeft - 1;
@@ -488,7 +474,7 @@ public class GameCharacter extends DataGameObj {
             if(hitA && holdA < 3 && isAttackable()) basicAttack();
             else if(hitJ && holdJ < 3 && isJumpable()) jumpDash();
             else if(hitD) {
-                if(isDefendable())
+                if(isDefendable() && timerD == 7)
                     setNewFrame(GUARD.frame+1);
                 else if(isRollable()) {
                     right = accX >= 0;
@@ -509,8 +495,8 @@ public class GameCharacter extends DataGameObj {
                 //Start walking/running
                 if(currentDataFrame().get(STATE) == STAND.state) {
                     if(hitRun && movX != 0) {
-                        runMomentum = 5;
-                        setAccX(accX +  5f * getModBySide());
+                        runMomentum = 4;
+                        setAccX(accX +  6f * getModBySide());
                         setNewFrame(RUN.frame, 1.2f * 0.1f);
                     } else
                         setNewFrame(WALK.frame, 2.0f * 0.1f);
@@ -580,7 +566,7 @@ public class GameCharacter extends DataGameObj {
             setNewFrame(!punch1 ? ATTACK_1.frame : ATTACK_2.frame);
         //Running attack
         else if(currentDataFrame().get(STATE) == RUN.state) {
-            setAccX(accX + 0.5f * getModBySide());
+            setAccX(accX + 1f * getModBySide());
             setNewFrame(RUN_ATTACK.frame);
         } //Jump attack
         else if(currentDataFrame().get(STATE) == JUMP.state && inAir)
