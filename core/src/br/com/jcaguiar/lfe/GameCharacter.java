@@ -8,9 +8,12 @@ import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
+import com.badlogic.gdx.utils.TimeUtils;
+import com.github.tommyettinger.colorful.oklab.ColorfulBatch;
 import javafx.scene.shape.Circle;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -62,14 +65,14 @@ public class GameCharacter extends DataGameObj {
     //Level     = Goes 1~7 and the default level 1 hero has 5 points in all attributes.
     //            VS-Mode enable to start at level 4.
     //Strength  = +5% in all-attacks, throwing weapons, handling heavy-objects. +3% defense.
-    //Vitality  = +10% hp-recovery and mp-recovery. +3% defense, fall-reduction, heal and status-effects (buff|nerf).
+    //Vitality  = +10% hp-recovery, mp-recovery, heal and status-effects (buff|nerf). +3% defense.
     //Dexterity = +4% critical-attack ratio (ratio = dexterity*4 ~ 100).
     //Agility   = +5% basic-attack speed and mobility (jump|dash|roll distance, walk|run speed, less roll time).
     //Power     = +10% in skill-attacks, heal and cast distance/speed.
     //
-    //  Lv 1: basic skill-set       | Davis: spaming balls      | Deep: spin-attack         | Freeze: winter breath
-    //  Lv 2: +1 super-skill        | Davis: flashbang punch    | Deep: blade blast         | Freeze: ice columns
-    //  Lv 3: +1 super-skill        | Davis: dragon speed       | Deep: killer blade        | Freeze: whirlwind
+    //  Lv 1: basic skill-set       | Davis: quick attack       | Deep: spin-attack         | Freeze: winter breath
+    //  Lv 2: +1 super-skill        | Davis: spaming balls      | Deep: sharped blast       | Freeze: ice columns
+    //  Lv 3: +1 super-skill        | Davis: flashbang punch    | Deep: killer blade        | Freeze: whirlwind
     //  Lv 4: +1 super-skill        | Davis: dragon punch       | Deep: berserk assault     | Freeze: ice forge
     //  Lv 5: upgrade 1 super-skill (free-cost)
     //  Lv 6: upgrade 1 super-skill (free-cost)
@@ -81,7 +84,7 @@ public class GameCharacter extends DataGameObj {
     //
     //  Critical-Attacks:
     //  Converts a percentage of the attack as bonus damage/fall that ignores defense and reduce enemies max hp.
-    //  Melee attacks gains +50% ratio against vulnerable enemies.
+    //  Melee attacks gains +50% ratio against vulnerable enemies (the max can goes to 150%).
     //  Additional +25% damage for all Weapon-Attacks (shoot/throw a weapon decrease the ratio by they altitude).
     //  Area-Attacks apply critical by calculating how centered the enemy is (size * enemy-hit-position).
     //  Non-Area-Attacks apply critical by the ratio itself.
@@ -733,13 +736,22 @@ public class GameCharacter extends DataGameObj {
         debugRenderer.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
 
+        ColorfulBatch newBatch = new ColorfulBatch();
+        newBatch.begin();
+//        newBatch.setColor(1, 1, 0.8f, 1);
+        newBatch.setColor(0.35f, 0.75f, 0.75f, 1); //GOOD
+        newBatch.draw(currentSprite, (int) getDisplayX(), getStage().getHeight() - getDisplayY(), (int) getWidth(), -getHeight());
+        newBatch.end();
+        newBatch.dispose();
+
         batch.begin();
         //Drawing the sprite
         batch.setColor(1f, 1f, 1f, 1f);
-        batch.draw(currentSprite, (int) getDisplayX(), getDisplayY(), (int) getWidth(), getHeight()); //batch.draw(batch, deltaTime);
+//        batch.draw(currentSprite, (int) getDisplayX(), getDisplayY(), (int) getWidth(), getHeight()); //batch.draw(batch, deltaTime);
         //Drawing numbers
         drawDebugInfo(batch);
         batch.end();
+        batch.setShader(null);
 
         //(int) getX() - currentDataFrame().get(CENTER_X) * getModBySide()
         //getRelativeSideX()
