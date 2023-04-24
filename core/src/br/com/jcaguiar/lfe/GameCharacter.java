@@ -688,6 +688,12 @@ public class GameCharacter extends DataGameObj {
             + currentDataFrame().getBodies().get(index).x * getModBySide();
     }
 
+    public float getRelativeInteractionX(int index) {
+        if(currentDataFrame().getInteractions().isEmpty()) return 0;
+        return (right ? getDisplayX() : getDisplayX() + getWidth())
+            + currentDataFrame().getInteractions().get(index).x * getModBySide();
+    }
+
     public float getDisplayX() {
         return getX() + (getWidth()/2)
             - (right ? currentDataFrame().get(CENTER_X) : (getWidth() - currentDataFrame().get(CENTER_X)));
@@ -716,12 +722,24 @@ public class GameCharacter extends DataGameObj {
         for(int i = 0; i < currentDataFrame().getBodies().size(); i++) {
             debugRenderer.setProjectionMatrix(batch.getProjectionMatrix());
             debugRenderer.begin(ShapeRenderer.ShapeType.Filled);
-            debugRenderer.setColor(0.5f, 0f, 0.5f, 0.5f);
+            debugRenderer.setColor(0f, 0f, 1f, 0.4f);
             debugRenderer.rect(
                 getRelativeBodyX(i),
                 getY() + currentDataFrame().getBodies().get(i).y,
                 currentDataFrame().getBodies().get(i).w * getModBySide(),
                 currentDataFrame().getBodies().get(i).h
+            );
+            debugRenderer.end();
+        }
+        for(int i = 0; i < currentDataFrame().getInteractions().size(); i++) {
+            debugRenderer.setProjectionMatrix(batch.getProjectionMatrix());
+            debugRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            debugRenderer.setColor(1f, 0f, 0f, 0.4f);
+            debugRenderer.rect(
+                getRelativeInteractionX(i),
+                getY() + currentDataFrame().getInteractions().get(i).y,
+                currentDataFrame().getInteractions().get(i).w * getModBySide(),
+                currentDataFrame().getInteractions().get(i).h
             );
             debugRenderer.end();
         }
