@@ -8,13 +8,9 @@ import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
-import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
-import com.badlogic.gdx.utils.TimeUtils;
-import com.github.tommyettinger.colorful.oklab.ColorfulBatch;
-import javafx.scene.shape.Circle;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
@@ -736,18 +732,37 @@ public class GameCharacter extends DataGameObj {
         debugRenderer.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
 
-        ColorfulBatch newBatch = new ColorfulBatch();
-        newBatch.begin();
-//        newBatch.setColor(1, 1, 0.8f, 1);
-        newBatch.setColor(0.35f, 0.75f, 0.75f, 1); //GOOD
-        newBatch.draw(currentSprite, (int) getDisplayX(), getStage().getHeight() - getDisplayY(), (int) getWidth(), -getHeight());
-        newBatch.end();
-        newBatch.dispose();
+
+        //EXAMPLE
+        //newBatch.begin();
+        //newBatch.draw(currentSprite, (int) getDisplayX(), getStage().getHeight() - getDisplayY(), (int) getWidth(), -getHeight());
+        //newBatch.end();
+        //PALLETES
+        //newBatch.setColor(0.35f, 0.75f, 0.75f, 1); //DARK RED
+        //newBatch.setColor(0.6f, 0.6f, 0.699f, 1); //MID RED
+        //newBatch.setTweak(0.75f, 0.4f, 0.2f, 0.35f); //LIGHT ICE
+        //EFFECTS ANIMATION
+        //crazyTime += Gdx.graphics.getDeltaTime();
+        //FIRE 1)
+        //(change) crazyTime += Gdx.graphics.getDeltaTime() * 0.25f;
+        //crazyTime = crazyTime > 0.8f ? 0.5f : crazyTime;
+        //crazyTime = crazyTime < 0.5 ? 0.5f : crazyTime;
+        //newBatch.setColor(0.6f, 0.6f, crazyTime, 1);
+        //FIRE 2)
+        //newBatch.setColor(0.6f, 0.6f, MathUtils.sin(MathUtils.cos(crazyTime * 2) * MathUtils.PI) * 0.1f + 0.65f, 1f);
+        //FIRE 3)
+        //newBatch.setTweak(0.75f, 0.6f, 0.6f, 0.35f);
+        //newBatch.setColor(0.5f, 0.6f, MathUtils.sin(MathUtils.cos(crazyTime * 2) * MathUtils.PI) * 0.05f + 0.6f, 1f);
+        //FIRE 4)
+        //newBatch.setTweak(0.75f, 0.7f, 0.3f, 0.35f);
+        //newBatch.setColor(0.5f, 0.5f, MathUtils.sin(MathUtils.cos(crazyTime * 2) * MathUtils.PI) * 0.05f - 0.2f, 1f);
+        //ICE 1)
+        //newBatch.setTweak(0.75f, 0.4f, MathUtils.sin(MathUtils.cos(crazyTime * 2) * MathUtils.PI) * 0.2f + 0.3f, 0.35f);
 
         batch.begin();
         //Drawing the sprite
         batch.setColor(1f, 1f, 1f, 1f);
-//        batch.draw(currentSprite, (int) getDisplayX(), getDisplayY(), (int) getWidth(), getHeight()); //batch.draw(batch, deltaTime);
+        batch.draw(currentSprite, (int) getDisplayX(), getDisplayY(), (int) getWidth(), getHeight()); //batch.draw(batch, deltaTime);
         //Drawing numbers
         drawDebugInfo(batch);
         batch.end();
