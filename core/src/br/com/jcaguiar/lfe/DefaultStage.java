@@ -31,7 +31,7 @@ public class DefaultStage extends Stage {
         this.boundX = boundX;
         this.boundW = boundW;
         this.boundZ1 = boundZ1;
-        this.boundZ2 = boundZ2;
+        this.boundZ2 = boundZ1 + boundZ2;
     }
 
     /** Creates a stage with the specified viewport and batch. This can be used to specify an existing batch or to customize which
@@ -42,7 +42,7 @@ public class DefaultStage extends Stage {
         this.boundX = boundX;
         this.boundW = boundW;
         this.boundZ1 = boundZ1;
-        this.boundZ2 = boundZ2;
+        this.boundZ2 = boundZ1 + boundZ2;
     }
 
     @Override
@@ -53,5 +53,13 @@ public class DefaultStage extends Stage {
         floorRenderer.rect(boundX, boundZ1, boundW, boundZ2);
         floorRenderer.end();
         super.draw();
+    }
+
+    public float getLimitZ1() {
+        return boundZ1 + 15;
+    }
+
+    public float getLimitZ2() {
+        return boundZ1 + boundZ2;
     }
 }

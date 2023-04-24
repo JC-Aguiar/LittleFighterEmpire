@@ -476,7 +476,7 @@ public class GameCharacter extends DataGameObj {
                 if(isDefendable() && timerD == 7)
                     setNewFrame(GUARD.frame+1);
                 else if(isRollable()) {
-                    right = accX >= 0;
+                    if(accX != 0) right = accX >= 0;
                     setNewFrame(DODGE.frame);
                 }
             }
@@ -532,12 +532,12 @@ public class GameCharacter extends DataGameObj {
     }
 
     private void checkSpecialCommands() {
-        hitDuA = (timerA > 0 && keyUp && timerD > 0);
-        hitDfA = (timerA > 0 && (keyLeft || keyRight) && timerD > 0);
-        hitDdA = (timerA > 0 && keyDown && timerD > 0);
-        hitDuJ = (timerJ > 0 && keyUp && timerD > 0);
-        hitDfJ = (timerJ > 0 && (keyLeft || keyRight) && timerD > 0);
-        hitDdJ = (timerJ > 0 && keyDown && timerD > 0);
+        hitDuA = (hitA && keyUp && timerD > 0);
+        hitDfA = (hitA && (keyLeft || keyRight) && timerD > 0);
+        hitDdA = (hitA && keyDown && timerD > 0);
+        hitDuJ = (hitJ && keyUp && timerD > 0);
+        hitDfJ = (hitJ && (keyLeft || keyRight) && timerD > 0);
+        hitDdJ = (hitJ && keyDown && timerD > 0);
     }
 
     private int doSpecialCommands() {
@@ -594,12 +594,16 @@ public class GameCharacter extends DataGameObj {
         //Apply X/Z acceleration and check collision
         movX = movX + accX;
         movZ = movZ + accZ;
-        if(posX + movX < ((DefaultStage)getStage()).boundX) movX = 0;
-        if(posX + movX > ((DefaultStage)getStage()).boundW) movX = 0;
-        if(getDisplayZ() + movZ < ((DefaultStage)getStage()).boundZ1) movZ = 0;
-        if(getDisplayZ() + movZ > ((DefaultStage)getStage()).boundZ2) movZ = 0;
         posX = getX() + posX + movX;
         posZ = getY() + posZ + movZ;
+        if(posX < ((DefaultStage)getStage()).boundX)
+            posX = ((DefaultStage)getStage()).boundX;
+        else if(posX + getWidth() > ((DefaultStage)getStage()).boundW)
+            posX = ((DefaultStage)getStage()).boundW - getWidth();
+        if(getDisplayZ() < ((DefaultStage)getStage()).getLimitZ1())
+            posZ = ((DefaultStage)getStage()).getLimitZ1() - getHeight();
+        else if(getDisplayZ() > ((DefaultStage)getStage()).getLimitZ2())
+            posZ = ((DefaultStage)getStage()).getLimitZ2() - getHeight();
 
         //Set X/Z axis position
         setX(posX);
@@ -728,7 +732,7 @@ public class GameCharacter extends DataGameObj {
         debugRenderer.setProjectionMatrix(batch.getProjectionMatrix());
         debugRenderer.begin(ShapeRenderer.ShapeType.Filled);
         debugRenderer.setColor(0f, 0f, 0f, 0.5f);
-        debugRenderer.rect(getX() + getWidth()/2 - 15f, getDisplayZ() - 10f, 30f, 10f);
+        debugRenderer.rect(getX() + getWidth()/2 - 20f, getDisplayZ() - 8f, 40f, 10f);
         debugRenderer.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
 
@@ -766,20 +770,17 @@ public class GameCharacter extends DataGameObj {
         //Drawing numbers
         drawDebugInfo(batch);
         batch.end();
-        batch.setShader(null);
 
         //(int) getX() - currentDataFrame().get(CENTER_X) * getModBySide()
         //getRelativeSideX()
 
         //Drawing frame
-        debugRenderer.setProjectionMatrix(batch.getProjectionMatrix());
-        debugRenderer.begin(ShapeRenderer.ShapeType.Line);
-        debugRenderer.setColor(1f, 0f, 0f, 1f);
-        debugRenderer.rect(getX(), getY(), getWidth(), getHeight());
-        debugRenderer.end();
+//        debugRenderer.setProjectionMatrix(batch.getProjectionMatrix());
+//        debugRenderer.begin(ShapeRenderer.ShapeType.Line);
+//        debugRenderer.setColor(1f, 0f, 0f, 1f);
+//        debugRenderer.rect(getX(), getY(), getWidth(), getHeight());
+//        debugRenderer.end();
         batch.begin();
-
-
 
         frameTimer -= Gdx.graphics.getDeltaTime();
     }

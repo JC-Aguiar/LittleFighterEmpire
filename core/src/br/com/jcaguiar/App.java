@@ -16,6 +16,8 @@ import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.stream.Stream;
 
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class App extends ApplicationAdapter {
@@ -23,6 +25,9 @@ public class App extends ApplicationAdapter {
 	float elapsedTime;
     Stage stage;
     OrthographicCamera camera;
+	Group players = new Group();
+	Group ais = new Group();
+
 
 	@Override
 	public void create () {
@@ -30,14 +35,14 @@ public class App extends ApplicationAdapter {
         camera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         camera.setToOrtho(true);
 		camera.update();
-        stage = new DefaultStage(new ScreenViewport(camera), 0f, 1500f, 0f, 200f);
+        stage = new DefaultStage(new ScreenViewport(camera), 0f, 1800f, 200f, 200f);
 
 		DataRepositry.loadDatFile(1, "C:\\joao.aguiar\\Workspace\\AGUIAR\\LFE\\LFE GDX\\assets\\Davis.dat");
         GameCharacter davis = new GameCharacter(DataRepositry.GAME_OBJS_MAP.get(1));
-        Group group = new Group();
-        group.addActor(davis);
+		players.addActor(davis);
 
-        stage.addActor(group);
+        stage.addActor(players);
+        stage.addActor(ais);
 		Gdx.input.setInputProcessor(stage);
 		stage.setKeyboardFocus(davis);
 
@@ -48,6 +53,13 @@ public class App extends ApplicationAdapter {
 	public void render () {
 		//elapsedTime += Gdx.graphics.getDeltaTime();
 
+		camera.position.x = Arrays.stream(players.getChildren().toArray())
+			.mapToInt(a -> (int)a.getX()/players.getChildren().size)
+			.sum();
+		if(camera.position.x < ((DefaultStage) stage).boundX + Gdx.graphics.getWidth()/2)
+			camera.position.x = ((DefaultStage) stage).boundX + Gdx.graphics.getWidth()/2;
+		else if(camera.position.x > ((DefaultStage) stage).boundW - Gdx.graphics.getWidth()/2)
+			camera.position.x = ((DefaultStage) stage).boundW - Gdx.graphics.getWidth()/2;
 		camera.update();
 		batch.setProjectionMatrix(camera.combined);
 
