@@ -23,4 +23,8 @@ public class ObjectInteractionBox extends ObjectBox {
     int catchingact;//the frame to go if catch someone
     int caughtact; //the frame the enemy go if been catch
 
+    public void checkColision() {
+
+    }
+
 }

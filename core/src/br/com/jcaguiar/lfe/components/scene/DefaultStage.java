@@ -1,4 +1,4 @@
-package br.com.jcaguiar.lfe.components.sceens;
+package br.com.jcaguiar.lfe.components.scene;
 
 import br.com.jcaguiar.lfe.components.objects.GameObject;
 import com.badlogic.gdx.Gdx;
@@ -13,8 +13,10 @@ import com.badlogic.gdx.utils.viewport.ScalingViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import lombok.Getter;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 
 @Getter
 public class DefaultStage extends Stage {
@@ -58,37 +60,48 @@ public class DefaultStage extends Stage {
         this.boundZ2 = boundZ1 + boundZ2;
     }
 
+
+
     @Override
     public void draw() {
+        //Draw the floor
         renderer.setProjectionMatrix(getBatch().getProjectionMatrix());
         renderer.begin(ShapeRenderer.ShapeType.Filled);
         renderer.setColor(0.5f, 0.25f, 0f, 1f);
         renderer.rect(boundX, boundZ1, boundW, boundZ2);
         renderer.end();
 
+        //Draw stage actors
         for(Actor actor : getRoot().getChildren().items) {
             if(actor instanceof Group) {
                 Gdx.graphics.getGL20().glEnable(GL20.GL_BLEND);
                 Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 
+                //Lopping all GameObjects
                 Arrays.stream(((Group) actor).getChildren().items)
                     .filter(obj -> obj instanceof GameObject)
                     .map(obj -> (GameObject) obj)
                     .sorted(Comparator.comparing(GameObject::getPosZ))
-                    .forEach(obj -> {
-                        obj.setZIndex((int) obj.getPosZ());
-                        renderer.setProjectionMatrix(getBatch().getProjectionMatrix());
-                        renderer.begin(ShapeRenderer.ShapeType.Filled);
-                        renderer.setColor(0f, 0f, 0f, 0.5f);
-                        renderer.rect(obj.getX() + obj.getWidth()/2 - 20f, obj.getDisplayZ() - 8f, 40f, 10f);
-                        renderer.end();
-                    });
+                    .forEach(this::processActors);
 
                 Gdx.gl.glDisable(GL20.GL_BLEND);
                 }
             }
 
+        //At end, draw the rest in super-class
         super.draw();
+    }
+
+    private void processActors(GameObject obj) {
+        //Set Z-Index of each object
+        obj.setZIndex((int) obj.getPosZ());
+
+        //Draw the shadow
+        renderer.setProjectionMatrix(getBatch().getProjectionMatrix());
+        renderer.begin(ShapeRenderer.ShapeType.Filled);
+        renderer.setColor(0f, 0f, 0f, 0.5f);
+        renderer.rect(obj.getX() + obj.getWidth()/2 - 20f, obj.getDisplayZ() - 8f, 40f, 10f);
+        renderer.end();
     }
 
     //TODO: change to something better (by using objects size)

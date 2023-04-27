@@ -1,19 +1,13 @@
 package br.com.jcaguiar.lfe.components.objects;
 
-import br.com.jcaguiar.lfe.components.objects.structure.DataFrame;
-import br.com.jcaguiar.lfe.components.sceens.DefaultStage;
+import br.com.jcaguiar.lfe.components.scene.DefaultStage;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.scenes.scene2d.Actor;
-import com.badlogic.gdx.scenes.scene2d.Group;
-import com.badlogic.gdx.utils.Array;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.experimental.FieldDefaults;
@@ -32,14 +26,12 @@ public class GameChar extends GameObject {
 
     //CORE
     String name;
-    int team;
     boolean isHuman;
     int walkCount = 0, runCount = 0;
     boolean walkReverse = false, runReverse = false;
     boolean punch1 = false;
-    public boolean debugNumbers = false;
-
     int runTimer; //only for player
+    public boolean debugNumbers = false; //TODO:remove
     private ShapeRenderer debugRenderer = new ShapeRenderer(); //TODO: teste! remove!
     BitmapFont font;  //TODO: teste! remove!
 
@@ -51,6 +43,8 @@ public class GameChar extends GameObject {
     int timerDead;
     final Map<StatusEffect, Integer> effectsMod = new HashMap<>();
     final Map<StatusEffect, Integer> effectsTime = new HashMap<>();
+    final Map<Integer, Integer> marksMod = new HashMap<>();
+    final Map<Integer, Integer> marksTime = new HashMap<>();
     boolean isLowHp = false, isLowMp = false, isSafe = false;
 
     //ATTRIBUTES
@@ -208,24 +202,6 @@ public class GameChar extends GameObject {
         }
     }
 
-    private void setBoundsPerSprite() {
-//        currentSprite.setCenter(currentSprite.getWidth()/2, 0f);
-        setBounds(currentSprite.getX(),
-                  currentSprite.getY(),
-                  currentSprite.getWidth(),
-                  currentSprite.getHeight());
-    }
-
-    private void setCurrentSprite() {
-        picIndex = currentDataFrame().get(PIC);
-        currentSprite = new Sprite(sprites[picIndex]);
-        currentSprite.setOriginCenter();
-//        currentSprite.setPosition(40, 0);
-//        setOriginX((float) currentSprite.getRegionWidth()/2);
-//        setOriginY(currentSprite.getRegionY() + currentDataFrame().get(CENTER_Y) / 2);
-//        currentSprite.setCenter(0f, 0f);
-    }
-
     public boolean isMovable() {
         return currentDataFrame().get(STATE) == STAND.state
             || currentDataFrame().get(STATE) == WALK.state
@@ -293,41 +269,6 @@ public class GameChar extends GameObject {
             setAccY(accY - Math.min(Math.abs(accX) / 1.5f + 3f, 9f));
             setAccZ(accZ + movZ);
         }
-    }
-
-    private void updateZ(int z) {
-        setY(posZ + z);
-        setZIndex((int) (1000 + posZ + z));
-    }
-
-    public boolean isInsideStageBoundX() {
-        return getX() > ((DefaultStage) getStage()).boundX;
-    }
-
-    public boolean isInsideStageBoundW() {
-        return getX() < ((DefaultStage) getStage()).boundW;
-    }
-
-    public boolean isInsideStageBoundZ1() { return getZIndex() > ((DefaultStage) getStage()).boundZ1; }
-
-    public boolean isInsideStageBoundZ2() {
-        return getZIndex() < ((DefaultStage) getStage()).boundZ2;
-    }
-
-    public float diferenceStageBoundZ1(float z) { return getZIndex() + z - ((DefaultStage) getStage()).boundZ1; }
-
-    public float diferenceStageBoundZ2(float z) { return getZIndex() + z - ((DefaultStage) getStage()).boundZ2; }
-
-//    public float getObjectiveX() {
-//        return (right ?  getX() : getX() + getWidth()) + getWidth() * getModBySide() - currentDataFrame().get(CENTER_X) * getModBySide();
-//    }
-//
-//    public float getObjectiveY() { return getY() + currentDataFrame().get(CENTER_Y); }
-//
-//    public float getObjectiveZ() { return posZ + getHeight(); }
-
-    public boolean isMovingForward() {
-        return right ? accX > 0 : accX < 0;
     }
 
     public void control() {
@@ -489,160 +430,29 @@ public class GameChar extends GameObject {
         punch1 = !punch1;
     }
 
-    public void setLocation(float movX, float movZ) {
-        //Apply gravity and set X/Y/Z acceleration values
-        doGravity();
-
-        //Calculate friction (X/Z axis)
+    @Override
+    protected void doFriction() {
         if(!inAir && accX != 0 && currentDataFrame().get(STATE) != RUN.state)
             setAccX(accX - (isFrictioning() ? accX * 0.15f : accX * 0.08f));
         if(!inAir && accZ != 0)
             setAccZ(accZ - (isFrictioning() ? accZ * 0.15f : accZ * 0.08f));
-
-
-        //Check minimum valid acceleration value or become 0
-        if(!hasAccX()) setAccX(0f);
-        if(!hasAccZ()) setAccZ(0f);
-
-        //Apply X/Z acceleration and check collision
-        movX = movX + accX;
-        movZ = movZ + accZ;
-        posX = getX() + posX + movX;
-        posZ = getY() + posZ + movZ;
-        if(posX < ((DefaultStage)getStage()).boundX)
-            posX = ((DefaultStage)getStage()).boundX;
-        else if(posX + getWidth() > ((DefaultStage)getStage()).boundW)
-            posX = ((DefaultStage)getStage()).boundW - getWidth();
-        if(getDisplayZ() < ((DefaultStage)getStage()).getLimitZ1())
-            posZ = ((DefaultStage)getStage()).getLimitZ1() - getHeight();
-        else if(getDisplayZ() > ((DefaultStage)getStage()).getLimitZ2())
-            posZ = ((DefaultStage)getStage()).getLimitZ2() - getHeight();
-
-        //Set X/Z axis position
-        setX(posX);
-        setY(posZ + posY);
-    }
-
-    private void doGravity() {
-        if(posY > -1 && accY >= 0) {
-            setAccY(0f);
-            posY = 0;
-            if(inAir) {
-                int currentState = currentDataFrame().get(STATE);
-                if(currentDataFrame().get(STATE) == JUMP.state)
-                    frameIndex = CROUCH.frame;
-                else if(currentDataFrame().get(STATE) == LYING_FRONT.state)
-                    frameIndex = LYING_FRONT.frame;
-                else
-                    frameIndex = LAND.frame;
-            }
-            inAir = false;
-        } else {
-            setAccY(accY + Math.abs(accY * 0.1f) + 0.1f);
-            if(isMovable()) frameIndex = JUMP.frame;
-            inAir = true;
-        }
-        posY += accY;
-    }
-
-    private boolean hasAccX() { return accX < -MIN_ACC || accX > MIN_ACC; }
-
-    private boolean hasAccZ() { return accZ < -MIN_ACC || accZ > MIN_ACC; }
-
-    private boolean hasEffectiveAccX() { return accX < -MIN_ACC*4 || accX > MIN_ACC*4; }
-
-    private boolean hasEffectiveAccZ() { return accZ < -MIN_ACC*4 || accZ > MIN_ACC*4; }
-
-    public float getRelativeBodyX(int index) {
-        if(currentDataFrame().getBodies().isEmpty()) return 0;
-        return (right ? getDisplayX() : getDisplayX() + getWidth())
-            + currentDataFrame().getBodies().get(index).x * getModBySide();
-    }
-
-    public float getRelativeInteractionX(int index) {
-        if(currentDataFrame().getInteractions().isEmpty()) return 0;
-        return (right ? getDisplayX() : getDisplayX() + getWidth())
-            + currentDataFrame().getInteractions().get(index).x * getModBySide();
     }
 
     @Override
-    public void draw(Batch batch, float parentAlpha) {
-        setBoundsPerSprite();
-        control();
-        checkNewFrame();
-        setCurrentSprite();
-        setFaceSide();
+    protected void doLanding() {
+        int currentState = currentDataFrame().get(STATE);
+        if(currentDataFrame().get(STATE) == JUMP.state)
+            frameIndex = CROUCH.frame;
+        else if(currentDataFrame().get(STATE) == LYING_FRONT.state)
+            frameIndex = LYING_FRONT.frame;
+        else
+            frameIndex = LAND.frame;
+    }
 
-        //Drawing debug info (coordinates and bodies)
-        batch.end();
-        Gdx.graphics.getGL20().glEnable(GL20.GL_BLEND);
-        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-        for(int i = 0; i < currentDataFrame().getBodies().size(); i++) {
-            debugRenderer.setProjectionMatrix(batch.getProjectionMatrix());
-            debugRenderer.begin(ShapeRenderer.ShapeType.Filled);
-            debugRenderer.setColor(0f, 0f, 1f, 0.4f);
-            debugRenderer.rect(
-                getRelativeBodyX(i),
-                getY() + currentDataFrame().getBodies().get(i).y,
-                currentDataFrame().getBodies().get(i).w * getModBySide(),
-                currentDataFrame().getBodies().get(i).h
-            );
-            debugRenderer.end();
-        }
-        for(int i = 0; i < currentDataFrame().getInteractions().size(); i++) {
-            debugRenderer.setProjectionMatrix(batch.getProjectionMatrix());
-            debugRenderer.begin(ShapeRenderer.ShapeType.Filled);
-            debugRenderer.setColor(1f, 0f, 0f, 0.4f);
-            debugRenderer.rect(
-                getRelativeInteractionX(i),
-                getY() + currentDataFrame().getInteractions().get(i).y,
-                currentDataFrame().getInteractions().get(i).w * getModBySide(),
-                currentDataFrame().getInteractions().get(i).h
-            );
-            debugRenderer.end();
-        }
-
-
-        //EXAMPLE
-        //newBatch.begin();
-        //newBatch.draw(currentSprite, (int) getDisplayX(), getStage().getHeight() - getDisplayY(), (int) getWidth(), -getHeight());
-        //newBatch.end();
-        //PALLETES
-        //newBatch.setColor(0.35f, 0.75f, 0.75f, 1); //DARK RED
-        //newBatch.setColor(0.6f, 0.6f, 0.699f, 1); //MID RED
-        //newBatch.setTweak(0.75f, 0.4f, 0.2f, 0.35f); //LIGHT ICE
-        //EFFECTS ANIMATION
-        //crazyTime += Gdx.graphics.getDeltaTime();
-        //FIRE 1)
-        //(change) crazyTime += Gdx.graphics.getDeltaTime() * 0.25f;
-        //crazyTime = crazyTime > 0.8f ? 0.5f : crazyTime;
-        //crazyTime = crazyTime < 0.5 ? 0.5f : crazyTime;
-        //newBatch.setColor(0.6f, 0.6f, crazyTime, 1);
-        //FIRE 2)
-        //newBatch.setColor(0.6f, 0.6f, MathUtils.sin(MathUtils.cos(crazyTime * 2) * MathUtils.PI) * 0.1f + 0.65f, 1f);
-        //FIRE 3)
-        //newBatch.setTweak(0.75f, 0.6f, 0.6f, 0.35f);
-        //newBatch.setColor(0.5f, 0.6f, MathUtils.sin(MathUtils.cos(crazyTime * 2) * MathUtils.PI) * 0.05f + 0.6f, 1f);
-        //FIRE 4)
-        //newBatch.setTweak(0.75f, 0.7f, 0.3f, 0.35f);
-        //newBatch.setColor(0.5f, 0.5f, MathUtils.sin(MathUtils.cos(crazyTime * 2) * MathUtils.PI) * 0.05f - 0.2f, 1f);
-        //ICE 1)
-        //newBatch.setTweak(0.75f, 0.4f, MathUtils.sin(MathUtils.cos(crazyTime * 2) * MathUtils.PI) * 0.2f + 0.3f, 0.35f);
-
-        batch.begin();
-        //Drawing the sprite
-        batch.setColor(1f, 1f, 1f, 1f);
-        batch.draw(currentSprite, (int) getDisplayX(), getDisplayY(), (int) getWidth(), getHeight()); //batch.draw(batch, deltaTime);
-        //Drawing numbers
-        if(debugNumbers) drawDebugInfo(batch);
-        font.draw(batch, "Z-Index: " + getZIndex(), getDisplayX(), getDisplayY() + getHeight() + 16);
-        font.draw(batch, "Z-Stage: " + ((DefaultStage)getStage()).getPositionZ((int) getY()), getDisplayX(), getDisplayY() + getHeight() + 40);
-        batch.end();
-
-        //Drawing frame
-        batch.begin();
-
-        frameTimer -= Gdx.graphics.getDeltaTime();
+    @Override
+    protected void inMidAir() {
+        setAccY(accY + Math.abs(accY * 0.1f) + 0.1f);
+        if(isMovable()) frameIndex = JUMP.frame;
     }
 
     private void drawDebugInfo(Batch batch) {

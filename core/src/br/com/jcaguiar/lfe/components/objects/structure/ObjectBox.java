@@ -15,4 +15,11 @@ public abstract class ObjectBox {
     int z1;
     int z2;
 
+    float absoluteX;
+    float absoluteY;
+    float absoluteH;
+    float absoluteW;
+    float absoluteZ1;
+    float absoluteZ2;
+
 }

@@ -1,25 +1,21 @@
 package br.com.jcaguiar;
 
-import br.com.jcaguiar.lfe.components.objects.GameObject;
 import br.com.jcaguiar.lfe.components.objects.GamePlayer;
 import br.com.jcaguiar.lfe.resources.DataRepositry;
 import br.com.jcaguiar.lfe.components.objects.GameChar;
-import br.com.jcaguiar.lfe.components.sceens.DefaultStage;
+import br.com.jcaguiar.lfe.components.scene.DefaultStage;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.Group;
-import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
-import lombok.val;
 
 import java.util.Arrays;
-import java.util.Comparator;
 
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class App extends ApplicationAdapter {
@@ -71,9 +67,9 @@ public class App extends ApplicationAdapter {
 			.orElse((int) camera.position.x);
 //			.sum();
 		if(camera.position.x < stage.boundX + Gdx.graphics.getWidth()/2)
-			camera.position.x = stage.boundX + Gdx.graphics.getWidth()/2;
+			camera.position.x = (int) (stage.boundX + Gdx.graphics.getWidth()/2);
 		else if(camera.position.x > stage.boundW - Gdx.graphics.getWidth()/2)
-			camera.position.x = stage.boundW - Gdx.graphics.getWidth()/2;
+			camera.position.x = (int) (stage.boundW - Gdx.graphics.getWidth()/2);
 		camera.update();
 		batch.setProjectionMatrix(camera.combined);
 

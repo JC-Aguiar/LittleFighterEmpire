@@ -18,7 +18,7 @@ import java.util.Map;
 @FieldDefaults(level = AccessLevel.PROTECTED)
 public class DataObject extends Actor {
 
-    int objectId; //TODO: set this!
+//    int objectId;
     String name;
     String head;
     final List<DataBmp> bmpSources = new ArrayList<>();
