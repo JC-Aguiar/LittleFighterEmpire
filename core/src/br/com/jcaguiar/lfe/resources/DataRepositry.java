@@ -1,5 +1,9 @@
-package br.com.jcaguiar.lfe;
+package br.com.jcaguiar.lfe.resources;
 
+import br.com.jcaguiar.lfe.components.objects.GameObject;
+import br.com.jcaguiar.lfe.components.objects.structure.DataBmp;
+import br.com.jcaguiar.lfe.components.objects.structure.DataFrame;
+import br.com.jcaguiar.lfe.components.objects.structure.DataFrameScope;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import lombok.val;
@@ -18,7 +22,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static br.com.jcaguiar.lfe.DataFrameScope.*;
+import static br.com.jcaguiar.lfe.components.objects.structure.DataFrameScope.*;
 
 /**
  * Reads and store all the sprite-sheets sources, then generates all frames per object's id
@@ -29,7 +33,7 @@ public abstract class DataRepositry {
     public static final List<Texture> IMAGES_SOURCE = new ArrayList<>();
 
     //A map when the keys/values are for object's id/frame;
-    public static final Map<Integer, DataGameObj> GAME_OBJS_MAP = new HashMap<>();
+    public static final Map<Integer, GameObject> GAME_OBJS_MAP = new HashMap<>();
     public static final Map<Integer, TextureRegion[]> PARTICLES_MAP = new HashMap<>();
 
     //Dat Tags
@@ -38,7 +42,7 @@ public abstract class DataRepositry {
     private static final String FRAME_TAG = "<frame>";
     private static final String FRAME_END_TAG = "<frame_end>";
 
-    private static void loadSprites(int objId, DataGameObj gameObj) {
+    private static void loadSprites(int objId, GameObject gameObj) {
         val spriteNum = gameObj.getBmpSources().stream().mapToInt(bmp -> bmp.row * bmp.col).sum();
         var animationFrames = new TextureRegion[spriteNum];
         int picIndex = 0;
@@ -66,7 +70,7 @@ public abstract class DataRepositry {
         System.out.println("DataRepositry - animationFrames size: " + animationFrames.length);
 
         //Add to the repository
-        GAME_OBJS_MAP.get(objId).sprites = animationFrames;
+        GAME_OBJS_MAP.get(objId).setSprites(animationFrames);
     }
 
     //Read the dat file in order to generate the frames' data for all actions/animations
@@ -77,7 +81,7 @@ public abstract class DataRepositry {
             throw new RuntimeException("File not found: " + path);
 
         //Open and read the file's content
-        DataGameObj dataGameObj = new DataGameObj();
+        GameObject gameObject = new GameObject();
         AtomicBoolean bmpContent = new AtomicBoolean(false);
         AtomicInteger frameIndex = new AtomicInteger(-1);
         AtomicReference<DataFrame> frameData = new AtomicReference<>(new DataFrame());
@@ -96,7 +100,7 @@ public abstract class DataRepositry {
                 //When inside <bmp> section
                 if(bmpContent.get() && !isBmpEnd(line)) {
                     System.out.println("Inside: <bmp> tag");
-                    dataGameObj.setBmpContent(line);
+                    gameObject.setBmpContent(line);
                     return;
                 }
                 //When outside <bmp> section
@@ -110,7 +114,7 @@ public abstract class DataRepositry {
                 System.out.println("Inside: <frame> " + frameIndex.get());
                 if(isFrameEnd(line)) {
                     System.out.println("Found: <frame_end> tag");
-                    dataGameObj.getDataFrames().put(frameIndex.get(), frameData.get());
+                    gameObject.getDataFrames().put(frameIndex.get(), frameData.get());
                     frameIndex.set(-1);
                     currentScope.set(null);
                     frameData.set(new DataFrame());
@@ -148,14 +152,14 @@ public abstract class DataRepositry {
             throw new RuntimeException(e);
         }
 
-        final String dataLoaderString = dataGameObj.getDataFrames().keySet()
+        final String dataLoaderString = gameObject.getDataFrames().keySet()
             .stream()
-            .map(f -> f + ": " + dataGameObj.getDataFrames().get(f).toString())
+            .map(f -> f + ": " + gameObject.getDataFrames().get(f).toString())
             .collect(Collectors.joining("\n"));
         System.out.println("Load Data File:\n" + dataLoaderString);
 
-        GAME_OBJS_MAP.put(objId, dataGameObj);
-        loadSprites(objId, dataGameObj);
+        GAME_OBJS_MAP.put(objId, gameObject);
+        loadSprites(objId, gameObject);
     }
 
     private static DataFrameScope getFrameScope(String line) {

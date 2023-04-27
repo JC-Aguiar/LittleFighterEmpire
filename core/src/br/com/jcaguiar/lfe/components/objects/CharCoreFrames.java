@@ -1,7 +1,7 @@
-package br.com.jcaguiar.lfe;
+package br.com.jcaguiar.lfe.components.objects;
 
 
-public enum CharacterCoreFrames {
+public enum CharCoreFrames {
 
     STAND(0, 0),
     WALK(1, 5),
@@ -57,7 +57,7 @@ public enum CharacterCoreFrames {
     public final int state;
     public final int frame;
 
-    CharacterCoreFrames(int state, int frame) {
+    CharCoreFrames(int state, int frame) {
         this.state = state;
         this.frame = frame;
     }

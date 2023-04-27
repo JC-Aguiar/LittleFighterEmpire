@@ -1,4 +1,4 @@
-package br.com.jcaguiar.lfe;
+package br.com.jcaguiar.lfe.components.objects.structure;
 
 import lombok.ToString;
 import lombok.val;
@@ -9,7 +9,7 @@ public class DataBmp {
     public String path;
     public int w, h, row, col;
 
-    protected DataBmp(String fileIndexes, String filePath, String w, String h, String row, String col) {
+    public DataBmp(String fileIndexes, String filePath, String w, String h, String row, String col) {
         val indexes = fileIndexes.replace("file(", "")
             .replace(")", "")
             .split("-");

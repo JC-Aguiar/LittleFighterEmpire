@@ -1,9 +1,9 @@
-package br.com.jcaguiar.lfe;
+package br.com.jcaguiar.lfe.components.objects;
 
 import java.util.Arrays;
 import java.util.Optional;
 
-public enum CharacterCommandKeyword {
+public enum CommandsKeyword {
     HIT_A("hit_a"),
     HIT_J("hit_j"),
     HIT_D("hit_d"),
@@ -18,12 +18,12 @@ public enum CharacterCommandKeyword {
 
     public final String keyword;
 
-    CharacterCommandKeyword(String keyword) {
+    CommandsKeyword(String keyword) {
         this.keyword = keyword;
     }
 
-    public static Optional<CharacterCommandKeyword> validKeyword(String text) {
-        return Arrays.stream(CharacterCommandKeyword.values())
+    public static Optional<CommandsKeyword> validKeyword(String text) {
+        return Arrays.stream(CommandsKeyword.values())
             .filter(fk -> fk.keyword.equals(text))
             .findFirst();
     }

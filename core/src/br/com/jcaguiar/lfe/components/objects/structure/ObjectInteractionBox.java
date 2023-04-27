@@ -1,8 +1,11 @@
-package br.com.jcaguiar.lfe;
+package br.com.jcaguiar.lfe.components.objects.structure;
 
+import lombok.AccessLevel;
 import lombok.ToString;
+import lombok.experimental.FieldDefaults;
 
 @ToString(callSuper = true)
+@FieldDefaults(level = AccessLevel.PUBLIC)
 public class ObjectInteractionBox extends ObjectBox {
 
     int kind;       //warning, attack, react, block, wind, twister, grab, item;

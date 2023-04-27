@@ -1,5 +1,7 @@
-package br.com.jcaguiar.lfe;
+package br.com.jcaguiar.lfe.components.objects;
 
+import br.com.jcaguiar.lfe.components.objects.structure.DataFrame;
+import br.com.jcaguiar.lfe.components.sceens.DefaultStage;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
@@ -9,35 +11,33 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.scenes.scene2d.InputEvent;
-import com.badlogic.gdx.scenes.scene2d.InputListener;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.Group;
+import com.badlogic.gdx.utils.Array;
 import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 import lombok.val;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 
-import static br.com.jcaguiar.lfe.CharacterCommandKeyword.*;
-import static br.com.jcaguiar.lfe.CharacterCoreFrames.*;
-import static br.com.jcaguiar.lfe.CharacterFrameKeyword.*;
+import static br.com.jcaguiar.lfe.components.objects.CharCoreFrames.*;
+import static br.com.jcaguiar.lfe.components.objects.CommandsKeyword.*;
+import static br.com.jcaguiar.lfe.components.objects.SpritePicKeyword.*;
 
-@Setter
 @Getter
-@FieldDefaults(level = AccessLevel.PRIVATE)
-public class GameCharacter extends DataGameObj {
+@FieldDefaults(level = AccessLevel.PROTECTED)
+public class GameChar extends GameObject {
 
     //CORE
-    int characterId;
+    String name;
     int team;
     boolean isHuman;
-    int walkCount, runCount = 0;
-    boolean walkReverse, runReverse = false;
-    Sprite currentSprite;
+    int walkCount = 0, runCount = 0;
+    boolean walkReverse = false, runReverse = false;
     boolean punch1 = false;
+    public boolean debugNumbers = false;
 
     int runTimer; //only for player
     private ShapeRenderer debugRenderer = new ShapeRenderer(); //TODO: teste! remove!
@@ -45,26 +45,33 @@ public class GameCharacter extends DataGameObj {
 
     //STATUS
     int lv;
-    int hpNow, hpMax, hpLimit, hpRegen;
-    int mpNow, mpMax, mpLimit, mpRegen;
     int fall, fallMax;
     int guard, guardMax;
     int armor, armorMax;
-    int timerSprite;
     int timerDead;
     final Map<StatusEffect, Integer> effectsMod = new HashMap<>();
     final Map<StatusEffect, Integer> effectsTime = new HashMap<>();
-    boolean isLowHp, isLowMp, isSafe = false;
+    boolean isLowHp = false, isLowMp = false, isSafe = false;
 
     //ATTRIBUTES
     int strength, vitality, dexterity, agility, power; //will;
     //Level     = Goes 1~7 and the default level 1 hero has 5 points in all attributes.
     //            VS-Mode enable to start at level 4.
     //Strength  = +5% in all-attacks, throwing weapons, handling heavy-objects. +3% defense.
-    //Vitality  = +10% hp-recovery, mp-recovery, heal and status-effects (buff|nerf). +3% defense.
-    //Dexterity = +4% critical-attack ratio (ratio = dexterity*4 ~ 100).
+    //Vitality  = +10% base hp-max, hp-recovery, mp-recovery, heal and status-effects (buff|nerf).
+    //Dexterity = +4% minimal critical-attack and +5% max critical-attack (ratio = dexterity*4 ~ dexterity*5+25).
     //Agility   = +5% basic-attack speed and mobility (jump|dash|roll distance, walk|run speed, less roll time).
-    //Power     = +10% in skill-attacks, heal and cast distance/speed.
+    //Power     = +10% in skill-attacks, heal and cast distance.
+    // RATIO  | *5-5  *3+45 |   *4  *5+25 |
+    // Dex 01 |  000 ~ 050  |  004 ~ 030  |
+    // Dex 03 |  010 ~ 054  |  012 ~ 040  |
+    // Dex 05 |  020 ~ 060  |  020 ~ 050  |
+    // Dex 07 |  030 ~ 066  |  028 ~ 070  |
+    // Dex 13 |  060 ~ 084  |  052 ~ 095  |
+    // Dex 15 |  080 ~ 090  |  060 ~ 105  |
+    // Dex 19 |  090 ~ 102  |  076 ~ 120  |
+    // Dex 22 |  105 ~ 111  |  088 ~ 135  |
+    // Dex 25 |  120 ~ 120  |  100 ~ 150  |
     //
     //  Lv 1: basic skill-set       | Davis: quick attack       | Deep: spin-attack         | Freeze: winter breath
     //  Lv 2: +1 super-skill        | Davis: spaming balls      | Deep: sharped blast       | Freeze: ice columns
@@ -85,25 +92,11 @@ public class GameCharacter extends DataGameObj {
     //  Area-Attacks apply critical by calculating how centered the enemy is (size * enemy-hit-position).
     //  Non-Area-Attacks apply critical by the ratio itself.
 
-
     //PHYSICS
-    //int size TODO: implement
-    boolean right = new Random().nextBoolean();
-    boolean inAir = false;
-    float posX, posY, posZ;
-    float accX = 0, accY = 0, accZ = 0;
     float runMomentum = 0;
     float jumpX, jumpY, jumpZ;
-    float startX, startZ;
-    int weaponId, grabId = -1;
-    int hitLag;
-    public static final float MAX_ACC_X = 30f;
-    public static final float MAX_ACC_Y = 50f;
-    public static final float MAX_ACC_Z = 30f;
-    public static final float MIN_ACC = 0.05f;
 
     //INPUTS
-    boolean keyUp, keyDown, keyLeft, keyRight;
     boolean hitRun, hitA, hitJ, hitD, hitAJ, hitDfA, hitDuA, hitDdA, hitDfJ, hitDuJ, hitDdJ, hitDAJ;
     int holdLeft, holdRight, holdA, holdJ;
     int timerLeft, timerRight, timerA, timerJ, timerD;
@@ -116,11 +109,7 @@ public class GameCharacter extends DataGameObj {
     //int totalNerfs;            TODO: implement
     //int totalMovement;        TODO: implement
 
-    //ANIMATION
-    int picIndex, frameIndex = 0;
-    float frameTimer;
-
-    public GameCharacter(DataGameObj dataObj) {
+    public GameChar(GameObject dataObj) {
         this.sprites = dataObj.sprites;
         this.dataFrames.putAll(dataObj.dataFrames);
         this.bmpSources.addAll(dataObj.bmpSources);
@@ -128,20 +117,6 @@ public class GameCharacter extends DataGameObj {
         this.name = dataObj.name;
         this.walkingFrameRate = dataObj.walkingFrameRate;
         this.runningFrameRate = dataObj.runningFrameRate;
-
-        addListener(new InputListener() {
-            @Override
-            public boolean keyDown(InputEvent event, int keycode) {
-                return keyPress(keycode);
-            }
-        });
-        addListener(new InputListener() {
-            @Override
-            public boolean keyUp(InputEvent event, int keycode) {
-                return keyRelease(keycode);
-            }
-        });
-
 
         // Carregando fonte TrueTypeFont
         val generator = new FreeTypeFontGenerator(Gdx.files.internal("Carlito-Bold.ttf"));
@@ -156,40 +131,14 @@ public class GameCharacter extends DataGameObj {
         generator.dispose();
     }
 
-    private boolean keyPress(int keycode) {
-        switch(keycode) {
-            case Input.Keys.RIGHT:  return keyRight = true;
-            case Input.Keys.LEFT:   return keyLeft = true;
-            case Input.Keys.UP:     return keyUp = true;
-            case Input.Keys.DOWN:   return keyDown = true;
-            case Input.Keys.Q:      return hitA = true;
-            case Input.Keys.W:      return hitJ = true;
-            case Input.Keys.E:      return hitD = true;
-            default:                return false;
-        }
-    }
-
-    private boolean keyRelease(int keycode) {
-        switch(keycode) {
-            case Input.Keys.RIGHT:  lastInput = keycode; keyRight = false; return true;
-            case Input.Keys.LEFT:   lastInput = keycode; keyLeft = false; return true;
-            case Input.Keys.UP:     lastInput = keycode; keyUp = false; return true;
-            case Input.Keys.DOWN:   lastInput = keycode; keyDown = false; return true;
-            case Input.Keys.Q:      lastInput = keycode; hitA = false; return true;
-            case Input.Keys.W:      lastInput = keycode; hitJ = false; return true;
-            case Input.Keys.E:      lastInput = keycode; hitD = false; return true;
-            default:                return false;
-        }
-    }
-
     //VS MODE
-    public void startVSMode(int hp, int mp, int team, int frame, boolean isHuman, int posX, int posZ) {
+    public void startVSMode(int hp, int mp, int team, int frame, int posX, int posZ) {
         this.hpMax = this.hpNow = this.hpLimit = hp;
         this.mpMax = mp;
         this.mpNow = this.mpLimit = 500;
         this.team = team;
         this.frameIndex = frame;
-        this.isHuman = isHuman;
+        this.isHuman = false;
         this.posX = posX;
         this.posY = 0;
         this.posZ = posZ;
@@ -200,20 +149,8 @@ public class GameCharacter extends DataGameObj {
 //        setRandomPosition();
     }
 
-    public DataFrame currentDataFrame() {
-        return dataFrames.get(frameIndex);
-    }
-
-    private void setFrameTimer() {
-        frameTimer = (float) currentDataFrame().get(WAIT) * 0.08f;
-    }
-
-    private void checkValidFrame() {
-        frameIndex = currentDataFrame() == null ? 0 : frameIndex;
-        frameIndex = Math.max(frameIndex, 0);
-    }
-
-    private void checkNewFrame() {
+    @Override
+    protected void checkNewFrame() {
         if(frameTimer <= 0) {
             val currentState = currentDataFrame().get(STATE);
             //Walking State
@@ -342,30 +279,6 @@ public class GameCharacter extends DataGameObj {
     public boolean isPunchable() {
         return  currentDataFrame().get(STATE) == STAND.state
             ||  currentDataFrame().get(STATE) == WALK.state;
-    }
-
-    private void setNewFrame(int index) {
-        frameIndex = index;
-        checkValidFrame();
-        setFrameTimer();
-        setNewFrameAcceleration();
-    }
-
-    private void setNewFrame(int index, float timer) {
-        frameIndex = index;
-        checkValidFrame();
-        frameTimer = timer;
-        setNewFrameAcceleration();
-    }
-
-    private void setNewFrameAcceleration() {
-        //When stopping run
-        if(frameIndex == STOP_RUN.frame) setAccX(accX + 1f * getModBySide());
-
-        //Apply acceleration when needed
-        setAccX(accX + getDvxMod());
-        setAccY(accY + getDvyMod());
-        if(keyUp || keyDown) setAccZ(accZ + getDvzMod() * (keyUp? -1 : 1));
     }
 
     private void jumpDash() {
@@ -541,8 +454,8 @@ public class GameCharacter extends DataGameObj {
     }
 
     private int doSpecialCommands() {
-        final Map<CharacterCommandKeyword, Integer> mapSkillCommands = currentDataFrame().getCommands();
-        for(CharacterCommandKeyword cmd : mapSkillCommands.keySet()) {
+        final Map<CommandsKeyword, Integer> mapSkillCommands = currentDataFrame().getCommands();
+        for(CommandsKeyword cmd : mapSkillCommands.keySet()) {
             if(mapSkillCommands.get(cmd) == 0) continue;
             if(cmd == HIT_UA && hitDuA) return mapSkillCommands.get(cmd);
             else if(cmd == HIT_FA && hitDfA) return mapSkillCommands.get(cmd);
@@ -608,10 +521,6 @@ public class GameCharacter extends DataGameObj {
         //Set X/Z axis position
         setX(posX);
         setY(posZ + posY);
-        //setZIndex((int) (getZIndex() + posZ));
-        //Z < 1000: Foreground (Game Background)
-        //Z < 2000: Middle (Game Objects)
-        //Z >= 2000: Front (Game UI)
     }
 
     private void doGravity() {
@@ -621,16 +530,16 @@ public class GameCharacter extends DataGameObj {
             if(inAir) {
                 int currentState = currentDataFrame().get(STATE);
                 if(currentDataFrame().get(STATE) == JUMP.state)
-                    setFrameIndex(CROUCH.frame);
+                    frameIndex = CROUCH.frame;
                 else if(currentDataFrame().get(STATE) == LYING_FRONT.state)
-                    setFrameIndex(LYING_FRONT.frame);
+                    frameIndex = LYING_FRONT.frame;
                 else
-                    setFrameIndex(LAND.frame);
+                    frameIndex = LAND.frame;
             }
             inAir = false;
         } else {
             setAccY(accY + Math.abs(accY * 0.1f) + 0.1f);
-            if(isMovable()) setFrameIndex(JUMP.frame);
+            if(isMovable()) frameIndex = JUMP.frame;
             inAir = true;
         }
         posY += accY;
@@ -644,44 +553,6 @@ public class GameCharacter extends DataGameObj {
 
     private boolean hasEffectiveAccZ() { return accZ < -MIN_ACC*4 || accZ > MIN_ACC*4; }
 
-    private float getDvxMod() {
-        if(currentDataFrame().get(DVX) >= 550) return 0;
-        return ((currentDataFrame().get(DVX) / 5) + (currentDataFrame().get(DVX) / 10) * 5
-            + currentDataFrame().get(DVX) * 0.15f) * getModBySide();
-    }
-
-    private float getDvyMod() {
-        if(currentDataFrame().get(DVY) >= 550) return 0;
-        return currentDataFrame().get(DVY) * 1.6f;
-    }
-
-    private float getDvzMod() {
-        if(currentDataFrame().get(DVZ) >= 550) return 0;
-        return (currentDataFrame().get(DVZ) / 10) * 5 + currentDataFrame().get(DVZ) * 0.1f;
-    }
-
-    private void setAccX(float newAccX) {
-        accX = newAccX;
-        if(accX > 0) accX = Math.min(accX, MAX_ACC_X);
-        else if(accX < 0) accX = Math.max(accX, -MAX_ACC_X);
-    }
-
-    private void setAccY(float newAccY) {
-        accY = newAccY;
-        if(accY > 0) accY = Math.min(accY, MAX_ACC_Y);
-        else if(accY < 0) accY = Math.max(accY, -MAX_ACC_Y);
-    }
-
-    private void setAccZ(float newAccZ) {
-        accZ = newAccZ;
-        if(accZ > 0) accZ = Math.min(accZ, MAX_ACC_Z);
-        else if(accZ < 0) accZ = Math.max(accZ, -MAX_ACC_Z);
-    }
-
-    private void setFaceSide() {
-        currentSprite.flip(!right, true);
-    }
-
     public float getRelativeBodyX(int index) {
         if(currentDataFrame().getBodies().isEmpty()) return 0;
         return (right ? getDisplayX() : getDisplayX() + getWidth())
@@ -692,19 +563,6 @@ public class GameCharacter extends DataGameObj {
         if(currentDataFrame().getInteractions().isEmpty()) return 0;
         return (right ? getDisplayX() : getDisplayX() + getWidth())
             + currentDataFrame().getInteractions().get(index).x * getModBySide();
-    }
-
-    public float getDisplayX() {
-        return getX() + (getWidth()/2)
-            - (right ? currentDataFrame().get(CENTER_X) : (getWidth() - currentDataFrame().get(CENTER_X)));
-    }
-
-    public float getDisplayY() { return getY() - getHeight() + currentDataFrame().get(CENTER_Y); }
-
-    public float getDisplayZ() { return posZ + getHeight(); }
-
-    private int getModBySide() {
-        return right ? 1 : -1;
     }
 
     @Override
@@ -744,16 +602,6 @@ public class GameCharacter extends DataGameObj {
             debugRenderer.end();
         }
 
-        //Drawing shadow
-        Gdx.graphics.getGL20().glEnable(GL20.GL_BLEND);
-        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-        debugRenderer.setProjectionMatrix(batch.getProjectionMatrix());
-        debugRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        debugRenderer.setColor(0f, 0f, 0f, 0.5f);
-        debugRenderer.rect(getX() + getWidth()/2 - 20f, getDisplayZ() - 8f, 40f, 10f);
-        debugRenderer.end();
-        Gdx.gl.glDisable(GL20.GL_BLEND);
-
 
         //EXAMPLE
         //newBatch.begin();
@@ -786,18 +634,12 @@ public class GameCharacter extends DataGameObj {
         batch.setColor(1f, 1f, 1f, 1f);
         batch.draw(currentSprite, (int) getDisplayX(), getDisplayY(), (int) getWidth(), getHeight()); //batch.draw(batch, deltaTime);
         //Drawing numbers
-        drawDebugInfo(batch);
+        if(debugNumbers) drawDebugInfo(batch);
+        font.draw(batch, "Z-Index: " + getZIndex(), getDisplayX(), getDisplayY() + getHeight() + 16);
+        font.draw(batch, "Z-Stage: " + ((DefaultStage)getStage()).getPositionZ((int) getY()), getDisplayX(), getDisplayY() + getHeight() + 40);
         batch.end();
 
-        //(int) getX() - currentDataFrame().get(CENTER_X) * getModBySide()
-        //getRelativeSideX()
-
         //Drawing frame
-//        debugRenderer.setProjectionMatrix(batch.getProjectionMatrix());
-//        debugRenderer.begin(ShapeRenderer.ShapeType.Line);
-//        debugRenderer.setColor(1f, 0f, 0f, 1f);
-//        debugRenderer.rect(getX(), getY(), getWidth(), getHeight());
-//        debugRenderer.end();
         batch.begin();
 
         frameTimer -= Gdx.graphics.getDeltaTime();

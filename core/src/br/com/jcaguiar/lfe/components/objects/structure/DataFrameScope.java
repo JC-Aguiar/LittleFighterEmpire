@@ -1,4 +1,4 @@
-package br.com.jcaguiar.lfe;
+package br.com.jcaguiar.lfe.components.objects.structure;
 
 public enum DataFrameScope {
 

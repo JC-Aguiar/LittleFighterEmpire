@@ -1,10 +1,10 @@
-package br.com.jcaguiar.lfe;
+package br.com.jcaguiar.lfe.components.objects.structure;
 
 import lombok.ToString;
 
 @ToString(callSuper = true)
 public class ObjectBodyBox extends ObjectBox {
 
-    int kind;
+    public int kind;
 
 }

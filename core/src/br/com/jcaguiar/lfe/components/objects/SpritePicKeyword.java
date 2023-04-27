@@ -1,9 +1,9 @@
-package br.com.jcaguiar.lfe;
+package br.com.jcaguiar.lfe.components.objects;
 
 import java.util.Arrays;
 import java.util.Optional;
 
-public enum CharacterFrameKeyword {
+public enum SpritePicKeyword {
     PIC("pic"),
     STATE("state"),
     WAIT("wait"),
@@ -17,12 +17,12 @@ public enum CharacterFrameKeyword {
 
     public final String keyword;
 
-    CharacterFrameKeyword(String keyword) {
+    SpritePicKeyword(String keyword) {
         this.keyword = keyword;
     }
 
-    public static Optional<CharacterFrameKeyword> validKeyword(String text) {
-        return Arrays.stream(CharacterFrameKeyword.values())
+    public static Optional<SpritePicKeyword> validKeyword(String text) {
+        return Arrays.stream(SpritePicKeyword.values())
             .filter(fk -> fk.keyword.equals(text))
             .findFirst();
     }

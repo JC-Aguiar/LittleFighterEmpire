@@ -1,5 +1,7 @@
-package br.com.jcaguiar.lfe;
+package br.com.jcaguiar.lfe.components.objects.structure;
 
+import br.com.jcaguiar.lfe.components.objects.CommandsKeyword;
+import br.com.jcaguiar.lfe.components.objects.SpritePicKeyword;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -12,12 +14,12 @@ import java.util.*;
 public class DataFrame {
 
     //FRAME KEYS
-    final Map<CharacterFrameKeyword, Integer> frameKeywords = new HashMap<>();
+    final Map<SpritePicKeyword, Integer> frameKeywords = new HashMap<>();
     String sound;
     //TODO: implement nextId;
 
     //COMMANDS KEYS
-    final Map<CharacterCommandKeyword, Integer> commandKeywords = new HashMap<>();
+    final Map<CommandsKeyword, Integer> commandKeywords = new HashMap<>();
 
     //BODIES, INTERACTIONS AND COORDINATES
     public static final int MAX_ELEMENTS_ARRAY = 4;
@@ -31,11 +33,11 @@ public class DataFrame {
 
     public DataFrame() {
         //Set default 0 value for all frame keywords
-        Arrays.stream(CharacterFrameKeyword.values())
+        Arrays.stream(SpritePicKeyword.values())
             .forEach(fk -> frameKeywords.put(fk, 0));
 
         //Set default 0 value for all command keywords
-        Arrays.stream(CharacterCommandKeyword.values())
+        Arrays.stream(CommandsKeyword.values())
             .forEach(ck -> commandKeywords.put(ck, 0));
     }
 
@@ -65,7 +67,7 @@ public class DataFrame {
         return overall;
     }
 
-    public Map<CharacterCommandKeyword, Integer> getCommands() {
+    public Map<CommandsKeyword, Integer> getCommands() {
         return commandKeywords;
     }
 
@@ -108,20 +110,20 @@ public class DataFrame {
     private void setFrameKeywords(Map<String, Integer> keyValues) {
         //Set frame/command keywords value from keyMap parameter
         keyValues.keySet().forEach(key -> {
-            CharacterFrameKeyword
+            SpritePicKeyword
                 .validKeyword(key)
                 .ifPresent(fk -> frameKeywords.put(fk, keyValues.get(key)));
-            CharacterCommandKeyword
+            CommandsKeyword
                 .validKeyword(key)
                 .ifPresent(ck -> commandKeywords.put(ck, keyValues.get(key)));
         });
     }
 
-    public int get(CharacterFrameKeyword keyword) {
+    public int get(SpritePicKeyword keyword) {
         return frameKeywords.get(keyword);
     }
 
-    public int get(CharacterCommandKeyword keyword) {
+    public int get(CommandsKeyword keyword) {
         return commandKeywords.get(keyword);
     }
 

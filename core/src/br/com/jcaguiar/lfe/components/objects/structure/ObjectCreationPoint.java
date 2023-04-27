@@ -1,5 +1,9 @@
-package br.com.jcaguiar.lfe;
+package br.com.jcaguiar.lfe.components.objects.structure;
 
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
+
+@FieldDefaults(level = AccessLevel.PUBLIC)
 public class ObjectCreationPoint extends ObjectStickPoint {
 
     int type;   //cast, forje, dual-cast, multiple-cast, dual-multiple-cast;
