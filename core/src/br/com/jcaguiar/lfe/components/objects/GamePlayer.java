@@ -11,6 +11,8 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PROTECTED)
 public class GamePlayer extends GameChar {
 
+    GameObject focusObj = null;
+
     public GamePlayer(GameObject dataObj) {
         super(dataObj);
         this.isHuman = true;

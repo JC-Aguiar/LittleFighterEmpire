@@ -16,6 +16,8 @@ import java.util.*;
 
 import static br.com.jcaguiar.lfe.components.objects.CharCoreFrames.*;
 import static br.com.jcaguiar.lfe.components.objects.SpritePicKeyword.*;
+import static br.com.jcaguiar.lfe.resources.CombatSystem.ACTIONS;
+import static br.com.jcaguiar.lfe.resources.CombatSystem.BODIES;
 
 @Getter
 @FieldDefaults(level = AccessLevel.PROTECTED)
@@ -24,7 +26,7 @@ public class GameObject extends DataObject {
     //CORE
     Sprite currentSprite;
     int owner = -1;
-    int team;
+    int team = 0;
 
     //ANIMATION
     int walkingFrameRate;
@@ -45,7 +47,7 @@ public class GameObject extends DataObject {
     float accX = 0, accY = 0, accZ = 0;
     float startX, startZ;
     int weaponId, grabId = -1;
-    int hitLag;
+    float hitLag = 0;
     public static final float MAX_ACC_X = 30f;
     public static final float MAX_ACC_Y = 50f;
     public static final float MAX_ACC_Z = 30f;
@@ -230,22 +232,22 @@ public class GameObject extends DataObject {
         currentSprite.flip(!right, true);
     }
 
-    protected float getDisplayX() {
+    public float getDisplayX() {
         return getX() + (getWidth()/2)
             - (right ? currentDataFrame().get(CENTER_X) : (getWidth() - currentDataFrame().get(CENTER_X)));
     }
 
-    protected float getDisplayY() { return getY() - getHeight() + currentDataFrame().get(CENTER_Y); }
+    public float getDisplayY() { return getY() - getHeight() + currentDataFrame().get(CENTER_Y); }
 
     public float getDisplayZ() { return posZ + getHeight(); }
 
-    public float getBodyX(ObjectBox body) {
+    public float getBodyX(SpaceObject body) {
         if(currentDataFrame().getBodies().isEmpty()) return 0;
         return (right ? getDisplayX() : getDisplayX() + getWidth())
             + body.x * getModBySide();
     }
 
-    public float getInteractionX(ObjectBox body) {
+    public float getInteractionX(SpaceObject body) {
         if(currentDataFrame().getInteractions().isEmpty()) return 0;
         return (right ? getDisplayX() : getDisplayX() + getWidth())
             + body.x * getModBySide();
@@ -262,6 +264,10 @@ public class GameObject extends DataObject {
             inAir = true;
         }
         posY += accY;
+    }
+
+    public void setHitLag(float time) {
+        hitLag = time;
     }
 
     protected void setLocation(float movX, float movZ) {
@@ -297,14 +303,15 @@ public class GameObject extends DataObject {
     @Override
     public void draw(Batch batch, float parentAlpha) {
         setBoundsPerSprite();
-        control();
-        checkNewFrame();
-        setCurrentSprite();
-        setFaceSide();
+        if(hitLag <= 0) {
+            control();
+            checkNewFrame();
+            setCurrentSprite(); //TODO: test this only when sprite change
+            setFaceSide();
+        }
 
         //Drawing debug info (bodies, etc...)
         batch.end();
-        checkCollision(batch);
 
         //EXAMPLE OF COLOR EFFECT
         //newBatch.begin();
@@ -340,14 +347,17 @@ public class GameObject extends DataObject {
 
         //At end
         batch.begin();
+        setSpaceBoxes(batch);
+
         frameTimer -= Gdx.graphics.getDeltaTime();
+        hitLag = hitLag <= 0 ? hitLag : hitLag - Gdx.graphics.getDeltaTime();
     }
 
-    private void checkCollision(Batch batch) {
+    private void setSpaceBoxes(Batch batch) {
         Gdx.graphics.getGL20().glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 
-        for(ObjectBodyBox body : currentDataFrame ().getBodies()) {
+        for(SpaceBody body : currentDataFrame().getBodies()) {
             //Set volume
             body.absoluteX  = getBodyX(body);
             body.absoluteW  = body.absoluteX + body.w * getModBySide();
@@ -359,11 +369,13 @@ public class GameObject extends DataObject {
             //Draw
             debugRenderer.setProjectionMatrix(batch.getProjectionMatrix());
             debugRenderer.begin(ShapeRenderer.ShapeType.Filled);
-            debugRenderer.setColor(0f, 0f, 1f, 0.4f);
-            debugRenderer.rect(getBodyX(body), getY() + body.y, body.w * getModBySide(), body.h);
+            debugRenderer.setColor(0f, 0f, 1f, 0.2f);
+            debugRenderer.rect(body.absoluteX, body.absoluteY, body.w * getModBySide(), body.h);
             debugRenderer.end();
         }
-        for(ObjectInteractionBox itr : currentDataFrame ().getInteractions()) {
+        BODIES.put(this, currentDataFrame().getBodies());
+
+        for(SpaceInteraction itr : currentDataFrame().getInteractions()) {
             //Set volume
             itr.absoluteX  = getBodyX(itr);
             itr.absoluteW  = itr.absoluteX + itr.w * getModBySide();
@@ -374,10 +386,11 @@ public class GameObject extends DataObject {
 
             debugRenderer.setProjectionMatrix(batch.getProjectionMatrix());
             debugRenderer.begin(ShapeRenderer.ShapeType.Filled);
-            debugRenderer.setColor(1f, 0f, 0f, 0.4f);
-            debugRenderer.rect(getInteractionX(itr), getY() + itr.y, itr.w * getModBySide(), itr.h);
+            debugRenderer.setColor(1f, 0f, 0f, 0.35f);
+            debugRenderer.rect(itr.absoluteX, itr.absoluteY, itr.w * getModBySide(), itr.h);
             debugRenderer.end();
         }
+        ACTIONS.put(this, currentDataFrame().getInteractions());
     }
 
     //METHODS TO IMPLEMENT ---------------------------------------------------------------

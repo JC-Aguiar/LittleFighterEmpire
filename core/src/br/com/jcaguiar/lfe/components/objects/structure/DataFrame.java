@@ -23,8 +23,8 @@ public class DataFrame {
 
     //BODIES, INTERACTIONS AND COORDINATES
     public static final int MAX_ELEMENTS_ARRAY = 4;
-    final List<ObjectBodyBox> bodies = new ArrayList<>();
-    final List<ObjectInteractionBox> interactions = new ArrayList<>();
+    final List<SpaceBody> bodies = new ArrayList<>();
+    final List<SpaceInteraction> interactions = new ArrayList<>();
 //    final List<ObjectCreationPoint> creations = new ArrayList<>(); TODO: implement
     ObjectCatchPoint prey = new ObjectCatchPoint();
     ObjectItemPoint item = new ObjectItemPoint();
@@ -42,14 +42,14 @@ public class DataFrame {
     }
 
     //GET TOTAL BODY VOLUME
-    public ObjectBodyBox overallBody() {
+    public SpaceBody overallBody() {
         int xMin = Integer.MAX_VALUE;
         int yMin = Integer.MAX_VALUE;
         int wMax = Integer.MIN_VALUE;
         int hMax = Integer.MIN_VALUE;
         int zMin = Integer.MAX_VALUE;
         int zMax = Integer.MIN_VALUE;
-        for(ObjectBodyBox body : bodies) {
+        for(SpaceBody body : bodies) {
             xMin = Math.min(xMin, body.x);
             yMin = Math.min(yMin, body.y);
             wMax = Math.max(wMax, body.w);
@@ -57,7 +57,7 @@ public class DataFrame {
             zMin = Math.min(zMin, body.z1);
             zMax = Math.max(zMax, body.z2);
         }
-        val overall = new ObjectBodyBox();
+        val overall = new SpaceBody();
         overall.x = xMin;
         overall.y = yMin;
         overall.w = wMax;
@@ -91,7 +91,7 @@ public class DataFrame {
 
     private void setBdyValues(Map<String, Integer> keyValues) {
         if(bodies.size() > MAX_ELEMENTS_ARRAY) return;
-        val bdy = new ObjectBodyBox();
+        val bdy = new SpaceBody();
 
         if(bdy.kind == 0) bdy.kind =  Optional.ofNullable(keyValues.get("kind")).orElse(0);
         if(bdy.x == 0)    bdy.x =     Optional.ofNullable(keyValues.get("x")).orElse(0);
@@ -159,7 +159,7 @@ public class DataFrame {
 
     private void setItrValues(Map<String, Integer> keyValues) {
         if(interactions.size() > MAX_ELEMENTS_ARRAY) return;
-        val itr = new ObjectInteractionBox();
+        val itr = new SpaceInteraction();
         if(itr.kind == 0)        itr.kind =        Optional.ofNullable(keyValues.get("kind")).orElse(0);
         if(itr.x == 0)           itr.x =           Optional.ofNullable(keyValues.get("x")).orElse(0);
         if(itr.y == 0)           itr.y =           Optional.ofNullable(keyValues.get("y")).orElse(0);

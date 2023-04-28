@@ -26,21 +26,17 @@ public class GameChar extends GameObject {
 
     //CORE
     String name;
-    boolean isHuman;
+    boolean isHuman; //TODO: check if is really necessary
     int walkCount = 0, runCount = 0;
     boolean walkReverse = false, runReverse = false;
     boolean punch1 = false;
-    int runTimer; //only for player
-    public boolean debugNumbers = false; //TODO:remove
-    private ShapeRenderer debugRenderer = new ShapeRenderer(); //TODO: teste! remove!
-    BitmapFont font;  //TODO: teste! remove!
 
     //STATUS
     int lv;
     int fall, fallMax;
     int guard, guardMax;
     int armor, armorMax;
-    int timerDead;
+    int deadTimer;
     final Map<StatusEffect, Integer> effectsMod = new HashMap<>();
     final Map<StatusEffect, Integer> effectsTime = new HashMap<>();
     final Map<Integer, Integer> marksMod = new HashMap<>();
@@ -112,17 +108,6 @@ public class GameChar extends GameObject {
         this.walkingFrameRate = dataObj.walkingFrameRate;
         this.runningFrameRate = dataObj.runningFrameRate;
 
-        // Carregando fonte TrueTypeFont
-        val generator = new FreeTypeFontGenerator(Gdx.files.internal("Carlito-Bold.ttf"));
-        FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        parameter.size = 20;
-        parameter.color = Color.WHITE;
-        parameter.flip = true;
-        parameter.shadowColor = Color.BLACK;
-        parameter.shadowOffsetX = 3;
-        parameter.shadowOffsetY = 3;
-        font = generator.generateFont(parameter);
-        generator.dispose();
     }
 
     //VS MODE
@@ -453,50 +438,6 @@ public class GameChar extends GameObject {
     protected void inMidAir() {
         setAccY(accY + Math.abs(accY * 0.1f) + 0.1f);
         if(isMovable()) frameIndex = JUMP.frame;
-    }
-
-    private void drawDebugInfo(Batch batch) {
-        //Char
-        font.draw(batch, "X: " + getX(), 0, 0);
-        font.draw(batch, "Y: " + getY(), 150, 0);
-        font.draw(batch, "Z: " + posZ, 300, 0);
-        font.draw(batch, "Altitude: " + posY, 450, 0);
-        font.draw(batch, "DisplayX: " + getDisplayX(), 600, 0);
-        font.draw(batch, "DisplayY: " + getDisplayY(), 800, 0);
-        font.draw(batch, "DisplayZ: " + getDisplayZ(), 1000, 0);
-        font.draw(batch, "AccX: " + accX, 0, 20);
-        font.draw(batch, "AccY: " + accY, 150, 20);
-        font.draw(batch, "AccZ: " + accZ, 300, 20);
-        font.draw(batch, "InAir: " + (inAir ? "true" : "false"), 450, 20);
-        font.draw(batch, "RightTimer: " + timerRight, 0, 40);
-        font.draw(batch, "LeftTimer: " + timerLeft, 125, 40);
-        font.draw(batch, "HoldRight: " + holdRight, 250, 40);
-        font.draw(batch, "HoldLeft: " + holdLeft, 375, 40);
-        font.draw(batch, "AtkTimer: " + timerA, 500, 40);
-        font.draw(batch, "JmpTimer: " + timerJ, 625, 40);
-        font.draw(batch, "DefTimer: " + timerD, 750, 40);
-        font.draw(batch, "RunMomentum: " + runMomentum, 875, 40);
-
-        //Keys
-        if(keyLeft) font.draw(batch, "Left", 0, Gdx.graphics.getHeight()-40);
-        if(keyUp) font.draw(batch, "Up", 75, Gdx.graphics.getHeight()-40);
-        if(keyRight) font.draw(batch, "Right", 150, Gdx.graphics.getHeight()-40);
-        if(keyDown) font.draw(batch, "Down", 225, Gdx.graphics.getHeight()-40);
-        if(hitA) font.draw(batch, "Attack", 300, Gdx.graphics.getHeight()-40);
-        if(hitJ) font.draw(batch, "Jump", 375, Gdx.graphics.getHeight()-40);
-        if(hitD) font.draw(batch, "Defense", 425, Gdx.graphics.getHeight()-40);
-        if(hitDuA) font.draw(batch, "D.U.A", 500, Gdx.graphics.getHeight()-40);
-        if(hitDfA) font.draw(batch, "D.F.A", 575, Gdx.graphics.getHeight()-40);
-        if(hitDdA) font.draw(batch, "D.D.A", 625, Gdx.graphics.getHeight()-40);
-        if(hitDuJ) font.draw(batch, "D.U.J", 700, Gdx.graphics.getHeight()-40);
-        if(hitDfJ) font.draw(batch, "D.F.J", 775, Gdx.graphics.getHeight()-40);
-        if(hitDdJ) font.draw(batch, "D.D.J", 825, Gdx.graphics.getHeight()-40);
-
-        //Stage
-        font.draw(batch, "StageX: " + ((DefaultStage) getStage()).boundX, 0, Gdx.graphics.getHeight()-20);
-        font.draw(batch, "StageW: " + ((DefaultStage) getStage()).boundW, 150, Gdx.graphics.getHeight()-20);
-        font.draw(batch, "StageZ1: " + ((DefaultStage) getStage()).boundZ1, 300, Gdx.graphics.getHeight()-20);
-        font.draw(batch, "StageZ2: " + ((DefaultStage) getStage()).boundZ2, 450, Gdx.graphics.getHeight()-20);
     }
 
 }

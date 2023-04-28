@@ -1,5 +1,7 @@
 package br.com.jcaguiar.lfe.components.scene;
 
+import br.com.jcaguiar.App;
+import br.com.jcaguiar.lfe.components.objects.GameChar;
 import br.com.jcaguiar.lfe.components.objects.GameObject;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
@@ -12,11 +14,14 @@ import com.badlogic.gdx.utils.Scaling;
 import com.badlogic.gdx.utils.viewport.ScalingViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import lombok.Getter;
+import lombok.val;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.List;
+import java.util.stream.Stream;
+
+import static br.com.jcaguiar.App.*;
+import static br.com.jcaguiar.App.debugFont;
 
 @Getter
 public class DefaultStage extends Stage {
@@ -60,10 +65,17 @@ public class DefaultStage extends Stage {
         this.boundZ2 = boundZ1 + boundZ2;
     }
 
-
-
     @Override
     public void draw() {
+        //Set camera position
+        val focus = getMainPlayer().getFocusObj();
+        final float posX = focus != null ? focus.getX() : getMainPlayer().getX();
+        getCamera().position.x = posX;
+        if(getCamera().position.x < boundX + Gdx.graphics.getWidth()/2)
+            getCamera().position.x = (boundX + Gdx.graphics.getWidth()/2f);
+        else if(getCamera().position.x > boundW - Gdx.graphics.getWidth()/2)
+            getCamera().position.x = (boundW - Gdx.graphics.getWidth()/2f);
+
         //Draw the floor
         renderer.setProjectionMatrix(getBatch().getProjectionMatrix());
         renderer.begin(ShapeRenderer.ShapeType.Filled);
@@ -90,6 +102,8 @@ public class DefaultStage extends Stage {
 
         //At end, draw the rest in super-class
         super.draw();
+        if(DEBUG) drawDebugInfo(getBatch(), getMainPlayer());
+//        CombatSystem.checkCollision();
     }
 
     private void processActors(GameObject obj) {
@@ -102,6 +116,8 @@ public class DefaultStage extends Stage {
         renderer.setColor(0f, 0f, 0f, 0.5f);
         renderer.rect(obj.getX() + obj.getWidth()/2 - 20f, obj.getDisplayZ() - 8f, 40f, 10f);
         renderer.end();
+
+
     }
 
     //TODO: change to something better (by using objects size)
@@ -114,5 +130,55 @@ public class DefaultStage extends Stage {
     }
 
     public int getPositionZ(int posY) { return (int) boundZ1 + posY; }
+
+    public void drawDebugInfo(Batch batch, GameChar hero) {
+        //Char
+        batch.begin();
+        debugFont.draw(batch, "X: " + hero.getX(), 0, 0);
+        debugFont.draw(batch, "Y: " + hero.getY(), 150, 0);
+        debugFont.draw(batch, "Z: " + hero.getPosZ(), 300, 0);
+        debugFont.draw(batch, "Altitude: " + hero.getPosY(), 450, 0);
+        debugFont.draw(batch, "DisplayX: " + hero.getDisplayX(), 600, 0);
+        debugFont.draw(batch, "DisplayY: " + hero.getDisplayY(), 800, 0);
+        debugFont.draw(batch, "DisplayZ: " + hero.getDisplayZ(), 1000, 0);
+        debugFont.draw(batch, "AccX: " + hero.getAccX(), 0, 20);
+        debugFont.draw(batch, "AccY: " + hero.getAccY(), 150, 20);
+        debugFont.draw(batch, "AccZ: " + hero.getAccZ(), 300, 20);
+        debugFont.draw(batch, "InAir: " + (hero.isInAir() ? "true" : "false"), 450, 20);
+        debugFont.draw(batch, "RightTimer: " + hero.getTimerRight(), 0, 40);
+        debugFont.draw(batch, "LeftTimer: " + hero.getTimerLeft(), 125, 40);
+        debugFont.draw(batch, "HoldRight: " + hero.getHoldRight(), 250, 40);
+        debugFont.draw(batch, "HoldLeft: " + hero.getHoldLeft(), 375, 40);
+        debugFont.draw(batch, "AtkTimer: " + hero.getTimerA(), 500, 40);
+        debugFont.draw(batch, "JmpTimer: " + hero.getTimerJ(), 625, 40);
+        debugFont.draw(batch, "DefTimer: " + hero.getTimerD(), 750, 40);
+        debugFont.draw(batch, "RunMomentum: " + hero.getRunMomentum(), 875, 40);
+
+        //Combat
+        debugFont.draw(batch, "HitLag: " + hero.getHitLag(), 0, Gdx.graphics.getHeight()-60);
+
+        //Keys
+        if(hero.isKeyLeft()) debugFont.draw(batch, "Left", 0, Gdx.graphics.getHeight()-40);
+        if(hero.isKeyUp()) debugFont.draw(batch, "Up", 75, Gdx.graphics.getHeight()-40);
+        if(hero.isKeyRight()) debugFont.draw(batch, "Right", 150, Gdx.graphics.getHeight()-40);
+        if(hero.isKeyDown()) debugFont.draw(batch, "Down", 225, Gdx.graphics.getHeight()-40);
+        if(hero.isHitA()) debugFont.draw(batch, "Attack", 300, Gdx.graphics.getHeight()-40);
+        if(hero.isHitJ()) debugFont.draw(batch, "Jump", 375, Gdx.graphics.getHeight()-40);
+        if(hero.isHitD()) debugFont.draw(batch, "Defense", 425, Gdx.graphics.getHeight()-40);
+        if(hero.isHitDuA()) debugFont.draw(batch, "D.U.A", 500, Gdx.graphics.getHeight()-40);
+        if(hero.isHitDfA()) debugFont.draw(batch, "D.F.A", 575, Gdx.graphics.getHeight()-40);
+        if(hero.isHitDdA()) debugFont.draw(batch, "D.D.A", 625, Gdx.graphics.getHeight()-40);
+        if(hero.isHitDuJ()) debugFont.draw(batch, "D.U.J", 700, Gdx.graphics.getHeight()-40);
+        if(hero.isHitDfJ()) debugFont.draw(batch, "D.F.J", 775, Gdx.graphics.getHeight()-40);
+        if(hero.isHitDdJ()) debugFont.draw(batch, "D.D.J", 825, Gdx.graphics.getHeight()-40);
+
+        //Stage
+        debugFont.draw(batch, "StageX: " + boundX, 0, Gdx.graphics.getHeight()-20);
+        debugFont.draw(batch, "StageW: " + boundW, 150, Gdx.graphics.getHeight()-20);
+        debugFont.draw(batch, "StageZ1: " + boundZ1, 300, Gdx.graphics.getHeight()-20);
+        debugFont.draw(batch, "StageZ2: " + boundZ2, 450, Gdx.graphics.getHeight()-20);
+        debugFont.draw(batch, "CameraX: " + getCamera().position.x, 600, Gdx.graphics.getHeight()-20);
+        batch.end();
+    }
 
 }

@@ -6,7 +6,7 @@ import lombok.experimental.FieldDefaults;
 
 @ToString(callSuper = true)
 @FieldDefaults(level = AccessLevel.PUBLIC)
-public class ObjectInteractionBox extends ObjectBox {
+public class SpaceInteraction extends SpaceObject {
 
     int kind;       //warning, attack, react, block, wind, twister, grab, item;
     int id;         //the id to be created on trigger; if 0 = no trigger;
