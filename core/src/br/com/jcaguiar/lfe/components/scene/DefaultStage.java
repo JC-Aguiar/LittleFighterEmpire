@@ -1,8 +1,8 @@
 package br.com.jcaguiar.lfe.components.scene;
 
-import br.com.jcaguiar.App;
 import br.com.jcaguiar.lfe.components.objects.GameChar;
 import br.com.jcaguiar.lfe.components.objects.GameObject;
+import br.com.jcaguiar.lfe.components.objects.GamePlayer;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.Batch;
@@ -18,7 +18,6 @@ import lombok.val;
 
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.stream.Stream;
 
 import static br.com.jcaguiar.App.*;
 import static br.com.jcaguiar.App.debugFont;
@@ -102,8 +101,9 @@ public class DefaultStage extends Stage {
 
         //At end, draw the rest in super-class
         super.draw();
-        if(DEBUG) drawDebugInfo(getBatch(), getMainPlayer());
-//        CombatSystem.checkCollision();
+        if(DEBUG) drawDebugInfo(getBatch());
+        //CombatSystem.checkCollision();
+
     }
 
     private void processActors(GameObject obj) {
@@ -116,8 +116,6 @@ public class DefaultStage extends Stage {
         renderer.setColor(0f, 0f, 0f, 0.5f);
         renderer.rect(obj.getX() + obj.getWidth()/2 - 20f, obj.getDisplayZ() - 8f, 40f, 10f);
         renderer.end();
-
-
     }
 
     //TODO: change to something better (by using objects size)
@@ -131,7 +129,28 @@ public class DefaultStage extends Stage {
 
     public int getPositionZ(int posY) { return (int) boundZ1 + posY; }
 
-    public void drawDebugInfo(Batch batch, GameChar hero) {
+    public void drawDebugInfo(Batch batch) {
+        GamePlayer hero = getMainPlayer();
+        GameChar target = getTestChar();
+
+        if(hero.currentDataFrame().getInteractions().size() > 0 && target.currentDataFrame().getBodies().size() > 0) {
+            val itr1 = hero.currentDataFrame().getInteractions().get(0);
+            val body1 = target.currentDataFrame().getBodies().get(0);
+            boolean collision = Math.min(body1.absoluteX, body1.absoluteW) <= Math.max(itr1.absoluteW,itr1.absoluteX)
+                && Math.max(body1.absoluteW, body1.absoluteX) >= Math.min(itr1.absoluteX, itr1.absoluteW)
+                && body1.absoluteY <= itr1.absoluteH && body1.absoluteH  >= itr1.absoluteY
+                && body1.absoluteZ1 <= itr1.absoluteZ2 && body1.absoluteZ2 >= itr1.absoluteZ1;;
+            if(collision) {
+                if(itr1.kind == 0 && hero.canHit() && target.canBeHit()) {
+                    hero.setHitLag(0.5f);
+                    target.setHitLag(0.5f);
+                    hero.setARest(Math.max(5, itr1.arest/2f));
+                    target.setVRest(Math.max(5, itr1.vrest/2f));
+                }
+            }
+        }
+
+
         //Char
         batch.begin();
         debugFont.draw(batch, "X: " + hero.getX(), 0, 0);
@@ -155,7 +174,25 @@ public class DefaultStage extends Stage {
         debugFont.draw(batch, "RunMomentum: " + hero.getRunMomentum(), 875, 40);
 
         //Combat
-        debugFont.draw(batch, "HitLag: " + hero.getHitLag(), 0, Gdx.graphics.getHeight()-60);
+//        debugFont.draw(batch, "HitRest: " + (int) hero.getaRest(), 0, Gdx.graphics.getHeight()-60);
+        if(hero.currentDataFrame().getInteractions().size() > 0) {
+            val itr1 = hero.currentDataFrame().getInteractions().get(0);
+            debugFont.draw(batch, "ItrX: " + itr1.absoluteX, 100, Gdx.graphics.getHeight()-60);
+            debugFont.draw(batch, "ItrY: " + itr1.absoluteY, 225, Gdx.graphics.getHeight()-60);
+            debugFont.draw(batch, "ItrW: " + itr1.absoluteW, 350, Gdx.graphics.getHeight()-60);
+            debugFont.draw(batch, "ItrH: " + itr1.absoluteH, 475, Gdx.graphics.getHeight()-60);
+            debugFont.draw(batch, "ItrZ1: " + itr1.absoluteZ1, 600, Gdx.graphics.getHeight()-60);
+            debugFont.draw(batch, "ItrZ2: " + itr1.absoluteZ2, 725, Gdx.graphics.getHeight()-60);
+        }
+        if(target.currentDataFrame().getBodies().size() > 0) {
+            val body1 = target.currentDataFrame().getBodies().get(0);
+            debugFont.draw(batch, "BodyX: " + body1.absoluteX, 100, Gdx.graphics.getHeight()-80);
+            debugFont.draw(batch, "BodyY: " + body1.absoluteY, 225, Gdx.graphics.getHeight()-80);
+            debugFont.draw(batch, "BodyW: " + body1.absoluteW, 350, Gdx.graphics.getHeight()-80);
+            debugFont.draw(batch, "BodyH: " + body1.absoluteH, 475, Gdx.graphics.getHeight()-80);
+            debugFont.draw(batch, "BodyZ1: " + body1.absoluteZ1, 600, Gdx.graphics.getHeight()-80);
+            debugFont.draw(batch, "BodyZ2: " + body1.absoluteZ2, 725, Gdx.graphics.getHeight()-80);
+        }
 
         //Keys
         if(hero.isKeyLeft()) debugFont.draw(batch, "Left", 0, Gdx.graphics.getHeight()-40);

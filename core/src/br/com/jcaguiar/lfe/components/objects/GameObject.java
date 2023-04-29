@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 import lombok.var;
 
@@ -25,7 +26,7 @@ public class GameObject extends DataObject {
 
     //CORE
     Sprite currentSprite;
-    int owner = -1;
+    GameObject owner = null;
     int team = 0;
 
     //ANIMATION
@@ -47,7 +48,7 @@ public class GameObject extends DataObject {
     float accX = 0, accY = 0, accZ = 0;
     float startX, startZ;
     int weaponId, grabId = -1;
-    float hitLag = 0;
+    @Setter float hitLag = 0, aRest = 0, vRest = 0;
     public static final float MAX_ACC_X = 30f;
     public static final float MAX_ACC_Y = 50f;
     public static final float MAX_ACC_Z = 30f;
@@ -55,6 +56,7 @@ public class GameObject extends DataObject {
 
     //INPUTS
     boolean keyUp, keyDown, keyLeft, keyRight;
+
 
     //LOADER CHAR BMP-SCOPE METHOD ----------------------------------------------------------
 
@@ -232,26 +234,23 @@ public class GameObject extends DataObject {
         currentSprite.flip(!right, true);
     }
 
+    public boolean canHit() {
+        return aRest <= 0;
+    }
+
+    public boolean canBeHit() {
+        return vRest <= 0;
+    }
+
     public float getDisplayX() {
         return getX() + (getWidth()/2)
-            - (right ? currentDataFrame().get(CENTER_X) : (getWidth() - currentDataFrame().get(CENTER_X)));
+            - (right ? currentDataFrame().get(CENTER_X) : (getWidth() - currentDataFrame().get(CENTER_X)))
+            + ((hitLag * 100) % 2);
     }
 
     public float getDisplayY() { return getY() - getHeight() + currentDataFrame().get(CENTER_Y); }
 
     public float getDisplayZ() { return posZ + getHeight(); }
-
-    public float getBodyX(SpaceObject body) {
-        if(currentDataFrame().getBodies().isEmpty()) return 0;
-        return (right ? getDisplayX() : getDisplayX() + getWidth())
-            + body.x * getModBySide();
-    }
-
-    public float getInteractionX(SpaceObject body) {
-        if(currentDataFrame().getInteractions().isEmpty()) return 0;
-        return (right ? getDisplayX() : getDisplayX() + getWidth())
-            + body.x * getModBySide();
-    }
 
     protected void doGravity() {
         if(posY > -1 && accY >= 0) {
@@ -266,24 +265,25 @@ public class GameObject extends DataObject {
         posY += accY;
     }
 
-    public void setHitLag(float time) {
-        hitLag = time;
-    }
-
     protected void setLocation(float movX, float movZ) {
-        //Apply gravity and set X/Y/Z acceleration values
-        doGravity();
-
-        //Calculate friction (X/Z axis)
-        doFriction();
+        if(hitLag <= 0) {
+            //Apply gravity and set X/Y/Z acceleration values
+            doGravity();
+            //Calculate friction (X/Z axis)
+            doFriction();
+            //Apply X/Z acceleration and check collision
+            movX = movX + accX;
+            movZ = movZ + accZ;
+        } else {
+            movX = 0;
+            movZ = 0;
+        }
 
         //Check minimum valid acceleration value or become 0
         if(!hasAccX()) setAccX(0f);
         if(!hasAccZ()) setAccZ(0f);
 
-        //Apply X/Z acceleration and check collision
-        movX = movX + accX;
-        movZ = movZ + accZ;
+        //Apply modifications and check stage bounds
         posX = getX() + posX + movX;
         posZ = getY() + posZ + movZ;
         if(isInsideStageBoundX())
@@ -303,12 +303,12 @@ public class GameObject extends DataObject {
     @Override
     public void draw(Batch batch, float parentAlpha) {
         setBoundsPerSprite();
+        control();
         if(hitLag <= 0) {
-            control();
             checkNewFrame();
-            setCurrentSprite(); //TODO: test this only when sprite change
-            setFaceSide();
         }
+        setCurrentSprite(); //TODO: test this only when sprite change
+        setFaceSide();
 
         //Drawing debug info (bodies, etc...)
         batch.end();
@@ -342,7 +342,7 @@ public class GameObject extends DataObject {
         //Drawing the sprite
         batch.begin();
         batch.setColor(1f, 1f, 1f, 1f);
-        batch.draw(currentSprite, (int) getDisplayX(), getDisplayY(), (int) getWidth(), getHeight()); //batch.draw(batch, deltaTime);
+        batch.draw(currentSprite, (int) getDisplayX(), getDisplayY(), (int) getWidth(), getHeight());
         batch.end();
 
         //At end
@@ -350,7 +350,9 @@ public class GameObject extends DataObject {
         setSpaceBoxes(batch);
 
         frameTimer -= Gdx.graphics.getDeltaTime();
-        hitLag = hitLag <= 0 ? hitLag : hitLag - Gdx.graphics.getDeltaTime();
+        hitLag = hitLag <= 0 ? 0 : hitLag - Gdx.graphics.getDeltaTime();
+        aRest = aRest <= 0 ? 0 : aRest - Gdx.graphics.getDeltaTime();
+        vRest = vRest <= 0 ? 0 : vRest - Gdx.graphics.getDeltaTime();
     }
 
     private void setSpaceBoxes(Batch batch) {
@@ -359,7 +361,7 @@ public class GameObject extends DataObject {
 
         for(SpaceBody body : currentDataFrame().getBodies()) {
             //Set volume
-            body.absoluteX  = getBodyX(body);
+            body.absoluteX  = (right ? getDisplayX() : getDisplayX() + getWidth()) + body.x * getModBySide();
             body.absoluteW  = body.absoluteX + body.w * getModBySide();
             body.absoluteY  = getY() + body.y;
             body.absoluteH  = body.absoluteY + body.h;
@@ -377,7 +379,7 @@ public class GameObject extends DataObject {
 
         for(SpaceInteraction itr : currentDataFrame().getInteractions()) {
             //Set volume
-            itr.absoluteX  = getBodyX(itr);
+            itr.absoluteX  = (right ? getDisplayX() : getDisplayX() + getWidth()) + itr.x * getModBySide();
             itr.absoluteW  = itr.absoluteX + itr.w * getModBySide();
             itr.absoluteY  = getY() + itr.y;
             itr.absoluteH  = itr.absoluteY + itr.h;

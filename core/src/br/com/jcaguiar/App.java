@@ -32,6 +32,7 @@ public class App extends ApplicationAdapter {
 	Group gameObjs = new Group();
 	Group debug = new Group();
 	@Getter static GamePlayer mainPlayer;
+	@Getter static GameChar testChar;
     public static BitmapFont debugFont;
 	public final static boolean DEBUG = true;
 
@@ -51,16 +52,16 @@ public class App extends ApplicationAdapter {
 
         //Adding chars
 		mainPlayer = new GamePlayer(DataRepositry.GAME_OBJS_MAP.get(1));
-        GameChar davisComp = new GameChar(DataRepositry.GAME_OBJS_MAP.get(1));
+		testChar = new GameChar(DataRepositry.GAME_OBJS_MAP.get(1));
 		gameObjs.addActor(mainPlayer);
-		gameObjs.addActor(davisComp);
+		gameObjs.addActor(testChar);
         stage.addActor(gameObjs);
 		Gdx.input.setInputProcessor(stage);
 		stage.setKeyboardFocus(mainPlayer);
 
         //Setting game-mode
 		mainPlayer.startVSMode(500, 255, 0, 0,  0, 50);
-		davisComp.startVSMode(500, 255, 0, 0, 100, 250);
+		testChar.startVSMode(500, 255, 0, 0, 100, 250);
 
         //Creating fonts for debug-info (TrueTypeFont)
         val generator = new FreeTypeFontGenerator(Gdx.files.internal("Carlito-Bold.ttf"));
